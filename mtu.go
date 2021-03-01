@@ -9,41 +9,41 @@ import (
 	"net"
 	"os/exec"
 	"runtime"
-	cecf "seemfast/configs/client"
 	"strconv"
 	"strings"
 	"time"
-
-	"golang.org/x/net/ipv4"
 )
 
-// discover the link's MTU,
+// Discover the MTU of the link by UDP packet
 
 // sever addr
 const sever string = "" //ip or domain
 // port port used by the server and client
 const port uint16 = 19989
 
-// MTU discovery
-// 此处的MTU指UDP数据最大的长度(8+20+14=42), 一般数据链路层传输数据包大小
+// pingHost ping host
+const pingHost string = "baidu.com"
 
-// Client client 阻塞一段时间
-func Client(isUpLink bool) uint16 {
+// Client client
+// if isUpLink = false, it will discover downlink's mtu, need sever support
+// discover the uplink through the PING command
+// may block for ten seconds; for example, PING command didn't replay
+func Client(isUpLink bool) (uint16, error) {
 
-	if isUpLink { //上行链路 ping
+	if isUpLink { //Uplink ping
 		var d []byte
 		var li [][]byte
 		var n int
 		var cmd *exec.Cmd
 		var stdout, stderr bytes.Buffer
 		var wrap []byte = make([]byte, 0)
-		var F func(l int) int // 0:发生错误或异常,如超时等 -1:太小  1:太大
+		var F func(l int) int // 0:error or exception,eg:timeout; -1:too small  1:too big
 
-		// android darwin linux windows freebsd(未被支持)
 		if runtime.GOOS == "windows" {
-			wrap = append(wrap, []byte{13, 10, 13, 10}...) // windows换行：\r\n=回车换行; 用于分割空行
+			//  Used to split blank lines
+			wrap = append(wrap, []byte{13, 10, 13, 10}...) // windows Wrap：\r\n=Enter(13) Wrap(10)
 			F = func(l int) int {
-				cmd = exec.Command("cmd", "/C", "ping", "-f", "-n", "1", "-l", strconv.Itoa(l), "-w", "1000", "baidu.com")
+				cmd = exec.Command("cmd", "/C", "ping", "-f", "-n", "1", "-l", strconv.Itoa(l), "-w", "1000", pingHost)
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
 
@@ -60,7 +60,7 @@ func Client(isUpLink bool) uint16 {
 				for _, v := range li {
 					rv := string(v)
 					if strings.Contains(rv, strconv.Itoa(l)) {
-						if strings.Contains(rv, `TTL`) { //太小
+						if strings.Contains(rv, `TTL`) { //small
 							return -1
 						} else if strings.Contains(rv, `DF`) {
 							return 1
@@ -70,10 +70,9 @@ func Client(isUpLink bool) uint16 {
 				return 0
 			}
 		} else if runtime.GOOS == "linux" {
-			wrap = append(wrap, []byte{10, 10}...) // Linux换行：\n=换行
+			wrap = append(wrap, []byte{10, 10}...) // Linux Wrap：\n=Wrap
 			F = func(l int) int {
-				// ping -M do -c 1 -s 1370 -W 1 baidu.com
-				cmd = exec.Command("ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-W", "1", "baidu.com")
+				cmd = exec.Command("ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-W", "1", pingHost)
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
 				err := cmd.Run()
@@ -83,13 +82,13 @@ func Client(isUpLink bool) uint16 {
 				}
 				d = append(d, stderr.Bytes()...)
 				d = append(d, stdout.Bytes()...)
-				d = com.ToUtf8(d[:n]) //编码判断
+				d = com.ToUtf8(d[:n])
 
 				li = bytes.Split(d, wrap)
 				for _, v := range li {
 					rv := string(v)
 					if strings.Contains(rv, strconv.Itoa(l)) {
-						if strings.Contains(rv, `ttl`) { //太小
+						if strings.Contains(rv, `ttl`) { //small
 							return -1
 						} else if strings.Contains(rv, `too long`) {
 							return 1
@@ -99,10 +98,9 @@ func Client(isUpLink bool) uint16 {
 				return 0
 			}
 		} else if runtime.GOOS == "darwin" {
-			wrap = append(wrap, []byte{13, 13}...) // macOS换行：\r=回车
+			wrap = append(wrap, []byte{13, 13}...) // macOS Wrap：\r=Enter
 			F = func(l int) int {
-				// ping -c 1 -t 1  -D -s 1500 baidu.com
-				cmd = exec.Command("cmd", "/C", "ping", "-c", "1", "-t", "1", "-D", "-s", strconv.Itoa(l), "baidu.com")
+				cmd = exec.Command("cmd", "/C", "ping", "-c", "1", "-t", "1", "-D", "-s", strconv.Itoa(l), pingHost)
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
 				err := cmd.Run()
@@ -118,7 +116,7 @@ func Client(isUpLink bool) uint16 {
 				for _, v := range li {
 					rv := string(v)
 					if strings.Contains(rv, strconv.Itoa(l)) {
-						if strings.Contains(rv, `ttl`) { //太小
+						if strings.Contains(rv, `ttl`) { //small
 							return -1
 						} else if strings.Contains(rv, `too long`) {
 							return 1
@@ -128,9 +126,9 @@ func Client(isUpLink bool) uint16 {
 				return 0
 			}
 		} else if runtime.GOOS == "android" {
-			wrap = append(wrap, []byte{10, 10}...) // Linux换行：\n=换行
+			wrap = append(wrap, []byte{10, 10}...) // Linux Wrap：\n=Wrap
 			F = func(l int) int {
-				cmd = exec.Command("/bin/ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-W", "1", "baidu.com") //"-c", "1", "baidu.com"
+				cmd = exec.Command("/bin/ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-W", "1", pingHost) //"-c", "1", pingHost
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
 				err := cmd.Run()
@@ -146,7 +144,7 @@ func Client(isUpLink bool) uint16 {
 				for _, v := range li {
 					rv := string(v)
 					if strings.Contains(rv, strconv.Itoa(l)) {
-						if strings.Contains(rv, `ttl`) { //太小
+						if strings.Contains(rv, `ttl`) { //small
 							return -1
 						} else if strings.Contains(rv, `too long`) {
 							return 1
@@ -157,40 +155,39 @@ func Client(isUpLink bool) uint16 {
 			}
 		} else {
 			err := errors.New("system " + runtime.GOOS + " not be supported")
-			com.Errorlog(err)
-			return 0
+			return 0, err
 		}
 
-		// 二分法查找
+		// Binary search
 		left, right, mid, step := 1, 2000, 0, 1999
 		for {
-			// mid向下取整
 			mid = int(float64((left + right) / 2))
 			r := F(mid)
 			fmt.Println(mid, r, right-left)
 
-			if 1 == r { //太大
+			if 1 == r { //big
 				right = mid - 1
-			} else if -1 == r { //太小
+			} else if -1 == r { //small
 				left = mid + 1
-			} else { // 获取错误
+			} else { // r==0 error or exception
 				break
 			}
 			step = right - left
 			if step <= 3 {
 				for i := right + 1; i <= left; i-- {
 					if F(i) == -1 {
-						return uint16(i)
+						return uint16(i), nil
 					}
 				}
 			}
 		}
-	} else { //下行链路 precision = 10
-		raddr1, err1 := net.ResolveUDPAddr("udp", cecf.SEVERADDR+":19989")
+	} else { //Downlink precision = 10
+
+		raddr1, err1 := net.ResolveUDPAddr("udp", sever+":"+strconv.Itoa(int(port)))
 		laddr1, err2 := net.ResolveUDPAddr("udp", ":19989")
 		conn, err3 := net.DialUDP("udp", laddr1, raddr1)
-		if com.Errorlog(err1, err2, err3) {
-			return 0
+		if err1 != nil || err2 != nil || err3 != nil {
+			return 0, errors.New(err1.Error() + err2.Error() + err3.Error())
 		}
 		conn.Close()
 
@@ -199,95 +196,119 @@ func Client(isUpLink bool) uint16 {
 		d = append(d, 0xa)
 		_, err1 = conn.Write(d)
 
-		// 接收 b
 		d = make([]byte, 2000)
-		var mtu uint16 = 0
-		go func() {
-			for {
-				n, _, err1 := conn.ReadFromUDP(d)
-				if err1 == nil && string(d[:37]) == muuid && d[37] == 0xb {
-					mtu = uint16(n)
+
+		// receive b and c
+		var getB bool = false
+		var len, step int
+
+		for i := 0; i < 15; i++ {
+			for { //b
+				conn.SetReadDeadline(time.Now().Add(time.Microsecond * 500)) //500ms
+				_, _, err := conn.ReadFromUDP(d)
+				if err != nil { //timeout
+					break
+				} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xb { //get b
+					getB = true
+					break
 				}
 			}
-		}()
-		time.Sleep(time.Second)
-		if mtu == 0 { //没有接收到数据包 服务器关闭
-			err := errors.New("MTU discover sever maybe closed")
-			com.Errorlog(err)
-		} else {
-			return mtu
+			for { //c
+				conn.SetReadDeadline(time.Now().Add(time.Microsecond * 100)) //100ms
+				_, _, err := conn.ReadFromUDP(d)
+				if err != nil { //timeout, maybe sever offline
+					err = errors.New("sever not has reply")
+					return 0, err
+				} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xc { //get c
+					len = int(d[38])<<8 + int(d[39])
+					step = int(d[40])<<8 + int(d[41])
+					break
+				}
+			}
+			if step == 1 {
+				if getB {
+					return uint16(len), nil
+				}
+				return uint16(len - 1), nil
+			}
+
+			step = step / 2
+			d = []byte(muuid)
+			// send d or e
+			if getB { //e
+				d = append(d, 0xe, uint8(len>>8), uint8(len), uint8(step>>8), uint8(step))
+				_, err := conn.Write(d)
+				if err != nil {
+					return 0, err
+				}
+			} else {
+				d = append(d, 0xd, uint8(len>>8), uint8(len), uint8(step>>8), uint8(step))
+				_, err := conn.Write(d)
+				if err != nil {
+					return 0, err
+				}
+			}
 		}
+
 	}
-	return 0
+	err := errors.New("Exception")
+	return 0, err
 }
 
-// Sever sever
-func Sever() {
+// Sever sever need root authority, remember open UDP port
+// detect downlink MTU by sending IP(DF) packets
+//
+func Sever() error {
+
 	laddr, err1 := net.ResolveUDPAddr("udp", ":19989")
-	lh, err2 := net.ListenUDP("udp", laddr)
-	if com.Errorlog(err1, err2) {
-		return
+	handle, err2 := net.ListenUDP("udp", laddr)
+	if err1 != nil || err2 != nil {
+		// log error
+		return errors.New(err1.Error() + err2.Error())
 	}
-	defer lh.Close()
+	defer handle.Close()
 
 	lIP := rawnet.GetLocalIP()
-	device := rawnet.GetDevice(lIP.String())
-	if lIP == nil || device == "" {
-		err1 = errors.New("can't get local IP or network card name；Loacl IP:" + lIP.String())
-		com.Errorlog(err1)
-		return
+	if lIP == nil {
+		err := errors.New("can't get local IP or network card name")
+		// log error
+		return err
 	}
 
-	d := make([]byte, 2000)
 	for {
-		// fmt.Println("读取UDP数据")
-		n, raddr, err1 := lh.ReadFromUDP(d)
-		if com.Errorlog(err1) {
-			continue
+		d := make([]byte, 2000)
+		n, raddr, _ := handle.ReadFromUDP(d)
+		var bodyB, bodyC []byte = d[:37], d[:37]
+		bodyB = append(bodyB, 0xb)
+
+		if n == 38 && d[37] == 0xa { //get a
+			tmp := make([]byte, 1000)
+			bodyB = append(bodyB, tmp...)
+			bodyC = append(bodyC, 0xc, 3, 232, 3, 232) //len,step=1000
+
+		} else if n == 42 && d[37] == 0xd { // get d
+			len := int(d[38])<<8 + int(d[39])
+			step := int(d[40])<<8 + int(d[41])
+			len = len - step
+			tmp := make([]byte, len)
+			bodyB = append(bodyB, tmp...)
+			bodyC = append(bodyC, 0xd, uint8(len>>8), uint8(len), d[40], d[41])
+
+		} else if n == 42 && d[37] == 0xe { //get e
+			len := int(d[38])<<8 + int(d[39])
+			step := int(d[40])<<8 + int(d[41])
+			len = len + step
+			tmp := make([]byte, len)
+			bodyB = append(bodyB, tmp...)
+			bodyC = append(bodyC, 0xe, uint8(len>>8), uint8(len), d[40], d[41])
 		}
-
-		muuid := d[:37]
-		if n == 38 {
-			if d[37] == 0xa { //开始 探测下行链路
-				// fmt.Println("读取到UDP数据", string(muuid), d[37])
-				// 发送DF IP包
-				go func() {
-					ipAddr, err1 := net.ResolveIPAddr("ip4", lIP.String())
-					conn, err2 := net.ListenIP("ip4:udp", ipAddr)
-					if com.Errorlog(err1, err2) {
-						return
-					}
-					defer conn.Close()
-
-					rawConn, err1 := ipv4.NewRawConn(conn) //ipconn to rawconn
-					if com.Errorlog(err1) {
-						return
-					}
-					var err error
-					for i := 0; i < 36; i++ {
-						var dr []byte
-						if i < 30 {
-							dr = make([]byte, 1500-i*10) //1250-(8+20+14)
-						} else {
-							dr = make([]byte, 560-(i-30)*10)
-						}
-						for i := 0; i < 37; i++ {
-							dr[i] = muuid[i]
-						}
-						dr[37] = 0xb
-
-						uR := rawnet.PackageUDP(lIP, raddr.IP, 19989, uint16(raddr.Port), dr)
-						iph, err1 := rawnet.PackageIPHeader(lIP, raddr.IP, 19989, uint16(raddr.Port), 2, 0, 17, uR)
-						if com.Errorlog(err1) {
-							return
-						}
-
-						err = rawConn.WriteTo(iph, uR, nil)
-					}
-					com.Errorlog(err)
-					return
-				}()
-			}
+		_, err := handle.WriteToUDP(bodyC, raddr) //reply c
+		if err != nil {
+			// log error
+		}
+		err = rawnet.SendDFIPPacket(lIP, raddr.IP, port, uint16(raddr.Port), bodyB) //reply b
+		if err != nil {
+			// log error
 		}
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// WindowsSendIPDF 使用Windows原语接口、发送IP包、不分包，只能设置部分参数
+// WindowsSendIPDF windows send DF ip packet
 func WindowsSendIPDF(rIP net.IP, rPort, protocol uint16, d []byte) error {
 	var wsaData windows.WSAData
 	err := windows.WSAStartup(2<<16+2, &wsaData)
@@ -37,59 +37,12 @@ func WindowsSendIPDF(rIP net.IP, rPort, protocol uint16, d []byte) error {
 	if err != nil {
 		return err
 	}
-	// 发送
-	// var d []byte = make([]byte, 0)
-	// d = append(d, 8, 0, 247, 95, 0, 1, 0, 159)
-	err = windows.Sendto(sh, d, 0, sAddr) //d是完整的传输层数据包
-	if err != nil {
-		return err
-	}
-	// 关闭
-	err = windows.Closesocket(sh)
-	if err != nil {
-		return err
-	}
-	err = windows.WSACleanup()
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
-// WindowsMTU 获取对MTU的估计
-func WindowsMTU(rIP net.IP, rPort uint16, d []byte) error {
-	var wsaData windows.WSAData
-	err := windows.WSAStartup(2<<16+2, &wsaData)
+	err = windows.Sendto(sh, d, 0, sAddr) //Complete transport layer data package
 	if err != nil {
 		return err
 	}
-	sh, err := windows.Socket(windows.AF_INET, windows.SOCK_RAW, windows.IPPROTO_ICMP) //windows.IPPROTO_ICMP
-	if err != nil {
-		return err
-	}
-	var rAddr windows.RawSockaddrInet4
-	rAddr.Family = windows.AF_INET
-	rAddr.Port = rPort
-	ips := [4]byte{rIP[12], rIP[13], rIP[14], rIP[15]}
-	rAddr.Addr = ips
-	q := (*windows.RawSockaddrAny)(unsafe.Pointer(&rAddr))
-	sAddr, err := q.Sockaddr()
-	if err != nil {
-		return err
-	}
-	var aOptVal bool = true
-	err = windows.Setsockopt(sh, windows.IPPROTO_IP, 14, (*byte)(unsafe.Pointer(&aOptVal)), int32(unsafe.Sizeof(aOptVal)))
-	if err != nil {
-		return err
-	}
-	// 发送
-	// var d []byte = make([]byte, 0)
-	// d = append(d, 8, 0, 247, 95, 0, 1, 0, 159)
-	err = windows.Sendto(sh, d, 0, sAddr) //d是完整的传输层数据包
-	if err != nil {
-		return err
-	}
-	// 关闭
+
 	err = windows.Closesocket(sh)
 	if err != nil {
 		return err
@@ -102,7 +55,7 @@ func WindowsMTU(rIP net.IP, rPort uint16, d []byte) error {
 }
 
 /*
-* 函数WindowsSendtoIPDF 对应的C程序参考
+* Corresponding C program
  */
 // -------------------------
 //  Windows
