@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
-//
+// discover the link's MTU,
 
 // sever addr
 const sever string = "" //ip or domain
