@@ -16,8 +16,9 @@ import (
 
 // Discover the MTU of the link by UDP packet
 
-// sever addr
-const sever string = "" //ip or domain
+// sever sever addr, ip or domain
+const sever string = ""
+
 // port port used by the server and client
 const port uint16 = 19989
 
@@ -184,7 +185,7 @@ func Client(isUpLink bool) (uint16, error) {
 	} else { //Downlink precision = 10
 
 		raddr1, err1 := net.ResolveUDPAddr("udp", sever+":"+strconv.Itoa(int(port)))
-		laddr1, err2 := net.ResolveUDPAddr("udp", ":19989")
+		laddr1, err2 := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(int(port)))
 		conn, err3 := net.DialUDP("udp", laddr1, raddr1)
 		if err1 != nil || err2 != nil || err3 != nil {
 			return 0, errors.New(err1.Error() + err2.Error() + err3.Error())
@@ -260,7 +261,7 @@ func Client(isUpLink bool) (uint16, error) {
 //
 func Sever() error {
 
-	laddr, err1 := net.ResolveUDPAddr("udp", ":19989")
+	laddr, err1 := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(int(port)))
 	handle, err2 := net.ListenUDP("udp", laddr)
 	if err1 != nil || err2 != nil {
 		// log error
