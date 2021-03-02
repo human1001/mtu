@@ -217,7 +217,7 @@ func Client(isUpLink bool) (uint16, error) {
 		if err1 != nil || err2 != nil || err3 != nil {
 			return 0, errors.New(err1.Error() + err2.Error() + err3.Error())
 		}
-		conn.Close()
+		defer conn.Close()
 
 		muuid := "M" + com.CreateUUID()
 		d := []byte(muuid)
@@ -308,6 +308,8 @@ func Sever() error {
 		n, raddr, _ := handle.ReadFromUDP(d)
 		var bodyB, bodyC []byte = d[:37], d[:37]
 		bodyB = append(bodyB, 0xb)
+
+		fmt.Println(d[:n])
 
 		if n == 38 && d[37] == 0xa { //get a
 			fmt.Println("收到a")
