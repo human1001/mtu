@@ -9,14 +9,15 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-//SendIPPacketDFWin windows send DF ip packet
-func SendIPPacketDFWin(rIP net.IP, rPort, protocol uint16, d []byte) error {
+//sendIPPacketDFUDP windows send DF ip packet
+func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
+	// lIP、lPort not be used
 	var wsaData windows.WSAData
 	err := windows.WSAStartup(2<<16+2, &wsaData)
 	if err != nil {
 		return err
 	}
-	sh, err := windows.Socket(windows.AF_INET, windows.SOCK_RAW, int(protocol)) //windows.IPPROTO_ICMP
+	sh, err := windows.Socket(windows.AF_INET, windows.SOCK_RAW, 17) //windows.IPPROTO_ICMP
 	if err != nil {
 		return err
 	}

@@ -311,7 +311,7 @@ func Sever() error {
 		if err != nil {
 			// log error
 		}
-		err = rawnet.SendIPPacketDF(lIP, raddr.IP, port, uint16(raddr.Port), bodyB) //reply b
+		err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, port, uint16(raddr.Port), bodyB) //reply b
 		if err != nil {
 			// log error
 		}
