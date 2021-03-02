@@ -3,13 +3,15 @@ package mtu
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"mtu/internal/com"
 	"mtu/internal/rawnet"
 	"net"
 	"os/exec"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -31,11 +33,11 @@ const pingHost string = "baidu.com"
 func Client(isUpLink bool) (uint16, error) {
 
 	if isUpLink { //Uplink ping
-		var d []byte
-		var li [][]byte
-		var n int
+
 		var cmd *exec.Cmd
-		var stdout, stderr bytes.Buffer
+		var Out, Err io.ReadCloser
+		var stdout, stderr []byte
+		var err1, err2 error
 		var wrap []byte = make([]byte, 0)
 		var F func(l int) int // 0:error or exception,eg:timeout; -1:too small  1:too big
 
@@ -44,114 +46,117 @@ func Client(isUpLink bool) (uint16, error) {
 			wrap = append(wrap, []byte{13, 10, 13, 10}...) // windows Wrap：\r\n=Enter(13) Wrap(10)
 			F = func(l int) int {
 				cmd = exec.Command("cmd", "/C", "ping", "-f", "-n", "1", "-l", strconv.Itoa(l), "-w", "1000", pingHost)
-				cmd.Stdout = &stdout
-				cmd.Stderr = &stderr
-
-				err := cmd.Run()
-				d = make([]byte, 0)
-				if err != nil {
-					d = append(d, []byte(err.Error())...)
+				Out, err1 = cmd.StdoutPipe()
+				Err, err2 = cmd.StderrPipe()
+				if err1 != nil || err2 != nil {
+					return 0
 				}
-				d = append(d, stderr.Bytes()...)
-				d = append(d, stdout.Bytes()...)
-				d = com.ToUtf8(d)
-
-				li = bytes.Split(d, wrap)
-				for _, v := range li {
-					rv := string(v)
-					if strings.Contains(rv, strconv.Itoa(l)) {
-						if strings.Contains(rv, `TTL`) { //small
-							return -1
-						} else if strings.Contains(rv, `DF`) {
-							return 1
-						}
-					}
+				cmd.Start()
+				stdout, err1 = ioutil.ReadAll(Out)
+				stderr, err2 = ioutil.ReadAll(Err)
+				if err1 != nil || err2 != nil {
+					return 0
 				}
-				return 0
+				// cmd.Wait()
+				stdout = com.ToUtf8(stdout)
+				fmt.Println(string(stdout))
+				fmt.Println("-----------------------------")
+
+				if bytes.Contains(stdout, []byte("DF")) {
+					return 1 //too long
+				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
+					return -1 //too small
+				} else {
+					return 0
+				}
 			}
-		} else if runtime.GOOS == "linux" {
+		} else if runtime.GOOS == "linux" || runtime.GOOS == "darwin" || runtime.GOOS == "android" {
 			wrap = append(wrap, []byte{10, 10}...) // Linux Wrap：\n=Wrap
 			F = func(l int) int {
 				cmd = exec.Command("ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-W", "1", pingHost)
-				cmd.Stdout = &stdout
-				cmd.Stderr = &stderr
-				err := cmd.Run()
-				d = make([]byte, 0)
-				if err != nil {
-					d = append(d, []byte(err.Error())...)
+				Out, err1 = cmd.StdoutPipe()
+				Err, err2 = cmd.StderrPipe()
+				if err1 != nil || err2 != nil {
+					return 0
 				}
-				d = append(d, stderr.Bytes()...)
-				d = append(d, stdout.Bytes()...)
-				d = com.ToUtf8(d[:n])
+				cmd.Start()
+				stdout, err1 = ioutil.ReadAll(Out)
+				stderr, err2 = ioutil.ReadAll(Err)
+				if err1 != nil || err2 != nil {
+					return 0
+				}
+				cmd.Wait()
+				stdout = com.ToUtf8(stdout)
+				stderr = com.ToUtf8(stderr)
 
-				li = bytes.Split(d, wrap)
-				for _, v := range li {
-					rv := string(v)
-					if strings.Contains(rv, strconv.Itoa(l)) {
-						if strings.Contains(rv, `ttl`) { //small
-							return -1
-						} else if strings.Contains(rv, `too long`) {
-							return 1
-						}
-					}
+				if bytes.Contains(com.ToUtf8(stderr), []byte("too long")) {
+					return 1 //too long
+				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
+					return -1 //too small
+				} else {
+					return 0
 				}
-				return 0
 			}
 		} else if runtime.GOOS == "darwin" {
 			wrap = append(wrap, []byte{13, 13}...) // macOS Wrap：\r=Enter
 			F = func(l int) int {
 				cmd = exec.Command("cmd", "/C", "ping", "-c", "1", "-t", "1", "-D", "-s", strconv.Itoa(l), pingHost)
-				cmd.Stdout = &stdout
-				cmd.Stderr = &stderr
-				err := cmd.Run()
-				d = make([]byte, 0)
-				if err != nil {
-					d = append(d, []byte(err.Error())...)
+				Out, err1 = cmd.StdoutPipe()
+				Err, err2 = cmd.StderrPipe()
+				if err1 != nil || err2 != nil {
+					return 0
 				}
-				d = append(d, stderr.Bytes()...)
-				d = append(d, stdout.Bytes()...)
-				d = com.ToUtf8(d[:n]) //编码
+				cmd.Start()
+				stdout, err1 = ioutil.ReadAll(Out)
+				stderr, err2 = ioutil.ReadAll(Err)
+				if err1 != nil || err2 != nil {
+					return 0
+				}
+				cmd.Wait()
+				stdout = com.ToUtf8(stdout)
+				stderr = com.ToUtf8(stderr)
 
-				li = bytes.Split(d, wrap)
-				for _, v := range li {
-					rv := string(v)
-					if strings.Contains(rv, strconv.Itoa(l)) {
-						if strings.Contains(rv, `ttl`) { //small
-							return -1
-						} else if strings.Contains(rv, `too long`) {
-							return 1
-						}
-					}
+				if bytes.Contains(com.ToUtf8(stderr), []byte("too long")) {
+
+					return 1 //too long
+				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
+					// PING baidu.com (39.156.69.79) 1000(1028) bytes of data.
+					// 1008 bytes from 39.156.69.79: icmp_seq=1 ttl=51 time=85.3 ms
+					return -1 //too small
+				} else {
+					return 0
 				}
-				return 0
 			}
 		} else if runtime.GOOS == "android" {
+
 			wrap = append(wrap, []byte{10, 10}...) // Linux Wrap：\n=Wrap
 			F = func(l int) int {
 				cmd = exec.Command("/bin/ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-W", "1", pingHost) //"-c", "1", pingHost
-				cmd.Stdout = &stdout
-				cmd.Stderr = &stderr
-				err := cmd.Run()
-				d = make([]byte, 0)
-				if err != nil {
-					d = append(d, []byte(err.Error())...)
+				Out, err1 = cmd.StdoutPipe()
+				Err, err2 = cmd.StderrPipe()
+				if err1 != nil || err2 != nil {
+					return 0
 				}
-				d = append(d, stderr.Bytes()...)
-				d = append(d, stdout.Bytes()...)
-				d = com.ToUtf8(d)
+				cmd.Start()
+				stdout, err1 = ioutil.ReadAll(Out)
+				stderr, err2 = ioutil.ReadAll(Err)
+				if err1 != nil || err2 != nil {
+					return 0
+				}
+				cmd.Wait()
+				stdout = com.ToUtf8(stdout)
+				stderr = com.ToUtf8(stderr)
 
-				li = bytes.Split(d, wrap)
-				for _, v := range li {
-					rv := string(v)
-					if strings.Contains(rv, strconv.Itoa(l)) {
-						if strings.Contains(rv, `ttl`) { //small
-							return -1
-						} else if strings.Contains(rv, `too long`) {
-							return 1
-						}
-					}
+				if bytes.Contains(com.ToUtf8(stderr), []byte("too long")) {
+
+					return 1 //too long
+				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
+					// PING baidu.com (39.156.69.79) 1000(1028) bytes of data.
+					// 1008 bytes from 39.156.69.79: icmp_seq=1 ttl=51 time=85.3 ms
+					return -1 //too small
+				} else {
+					return 0
 				}
-				return 0
 			}
 		} else {
 			err := errors.New("system " + runtime.GOOS + " not be supported")
@@ -163,6 +168,7 @@ func Client(isUpLink bool) (uint16, error) {
 		for {
 			mid = int(float64((left + right) / 2))
 			r := F(mid)
+			// fmt.Println(mid, left, right)
 
 			if 1 == r { //big
 				right = mid - 1

@@ -167,8 +167,7 @@ func SendIPPacketDF(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 
 	// sendmsg: not implemented on windows/amd64
 	if runtime.GOOS == "windows" {
-		// return rawnetwindows.SendIPPacketDF(rIP, rPort, 17, uR)
-		return errors.New("please channel source code annotate")
+		return SendIPPacketDFWin(rIP, rPort, 17, uR)
 	} else if runtime.GOOS == "linux" {
 
 		raddr, err1 := net.ResolveIPAddr("ip4:udp", rIP.String())
