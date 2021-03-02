@@ -3,7 +3,6 @@ package mtu
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"mtu/internal/com"
 	"mtu/internal/rawnet"
 	"net"
@@ -164,7 +163,6 @@ func Client(isUpLink bool) (uint16, error) {
 		for {
 			mid = int(float64((left + right) / 2))
 			r := F(mid)
-			fmt.Println(mid, r, right-left)
 
 			if 1 == r { //big
 				right = mid - 1
