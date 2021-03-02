@@ -18,7 +18,3 @@
 
 可以得到上行链路的MTU。
 
-```shell
-set CGO_ENABLED=0&& set GOOS=android&& set GOARCH=arm64&& set CC_FOR_TARGET=D:\android-sdk\ndk\22.0.7026061\toolchains\llvm\prebuilt\windows-x86_64\bin\aarch64-linux-android30-clang&& go build main.go
-```
-

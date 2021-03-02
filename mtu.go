@@ -18,7 +18,7 @@ import (
 // Discover the MTU of the link by UDP packet
 
 // sever sever addr, ip or domain
-const sever string = ""
+const sever string = "114.116.254.26"
 
 // port port used by the server and client
 const port uint16 = 19989
@@ -26,8 +26,9 @@ const port uint16 = 19989
 // pingHost ping host
 const pingHost string = "baidu.com"
 
-// UpLinkFast PMTUD get MTU, more fast less reliable
-const UpLinkFast bool = false
+// UpLinkFast use PMTUD get MTU, more fast less reliable
+// eg: ping: local error: Message too long, mtu=1400
+const UpLinkFast bool = true
 
 // Client client
 // if isUpLink = false, it will discover downlink's mtu, need sever support
@@ -43,6 +44,24 @@ func Client(isUpLink bool) (uint16, error) {
 		var err1, err2 error
 		var wrap []byte = make([]byte, 0)
 		var F func(l int) int // 0:error or exception,eg:timeout; -1:too small  1:too big
+
+		var Fs func(f bool, b []byte) int = func(f bool, b []byte) int {
+			if UpLinkFast {
+				if bytes.Contains(stderr, []byte("mtu=")) { // Linux Wrap：\n 10
+					a := bytes.Split(stderr, []byte("mtu="))[1]
+					for i, v := range a {
+						if v == uint8(10) {
+							j, err := strconv.Atoi(string(a[:i]))
+							if err != nil {
+								break
+							}
+							return j - 28
+						}
+					}
+				}
+			}
+			return 1 //too long
+		}
 
 		if runtime.GOOS == "windows" {
 			//  Used to split blank lines
@@ -92,22 +111,7 @@ func Client(isUpLink bool) (uint16, error) {
 
 				if bytes.Contains(stderr, []byte("too long")) {
 					// ping: local error: message too long, mtu=1400
-					if UpLinkFast {
-						if bytes.Contains(stderr, []byte("mtu=")) { //// Linux Wrap：\n 10
-							a := bytes.Split(stderr, []byte("mtu="))[1]
-							for i, v := range a {
-								if v == uint8(10) {
-									fmt.Println("值：：：：：：：：：：", string(a[:i]))
-									j, err := strconv.Atoi(string(a[:i]))
-									if err != nil {
-										break
-									}
-									return j - 28
-								}
-							}
-						}
-					}
-					return 1 //too long
+					return Fs(UpLinkFast, stderr)
 				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
 					return -1 //too small
 				} else {
@@ -134,8 +138,8 @@ func Client(isUpLink bool) (uint16, error) {
 				stderr = com.ToUtf8(stderr)
 
 				if bytes.Contains(stderr, []byte("too long")) {
+					return 1
 
-					return 1 //too long
 				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
 					// PING baidu.com (39.156.69.79) 1000(1028) bytes of data.
 					// 1008 bytes from 39.156.69.79: icmp_seq=1 ttl=51 time=85.3 ms
@@ -165,8 +169,8 @@ func Client(isUpLink bool) (uint16, error) {
 				stderr = com.ToUtf8(stderr)
 
 				if bytes.Contains(stderr, []byte("too long")) {
-
-					return 1 //too long
+					// ping: local error: Message too long, mtu=1400
+					return Fs(UpLinkFast, stderr)
 				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
 					// PING baidu.com (39.156.69.79) 1000(1028) bytes of data.
 					// 1008 bytes from 39.156.69.79: icmp_seq=1 ttl=51 time=85.3 ms
@@ -306,6 +310,8 @@ func Sever() error {
 		bodyB = append(bodyB, 0xb)
 
 		if n == 38 && d[37] == 0xa { //get a
+			fmt.Println("收到a")
+
 			tmp := make([]byte, 1000)
 			bodyB = append(bodyB, tmp...)
 			bodyC = append(bodyC, 0xc, 3, 232, 3, 232) //len,step=1000
