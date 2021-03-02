@@ -2,9 +2,9 @@ package rawnet
 
 import (
 	"errors"
-	"mtu/internal/rawnet/rawnetwindows"
 	"net"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/ipv4"
@@ -168,7 +168,10 @@ func SendIPPacketDF(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 
 	// sendmsg: not implemented on windows/amd64
 	if runtime.GOOS == "windows" {
-		return rawnetwindows.SendIPPacketDF(rIP, rPort, 17, uR)
+		// return rawnetwindows.SendIPPacketDF(rIP, rPort, 17, uR)
+		_, p, n, _ := runtime.Caller(0)
+		err := errors.New("Please annotate" + p + " " + strconv.Itoa(n) + "-" + strconv.Itoa(n+3) + "lines; and uncomment " + strconv.Itoa(n-1) + " line")
+		return err
 	} else if runtime.GOOS == "linux" {
 
 		raddr, err1 := net.ResolveIPAddr("ip4:udp", rIP.String())
