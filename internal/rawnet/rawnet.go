@@ -168,17 +168,21 @@ func SendDFIPPacket(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 
 	// sendmsg: not implemented on windows/amd64
 	if runtime.GOOS == "windows" {
-		return rawnetwindows.WindowsSendIPDF(rIP, rPort, 17, uR)
-	}
+		return rawnetwindows.SendIPPacketDF(rIP, rPort, 17, uR)
+	} else if runtime.GOOS == "linux" {
 
-	raddr, err1 := net.ResolveIPAddr("ip4:udp", rIP.String())
-	laddr, err2 := net.ResolveIPAddr("ip4:udp", lIP.String())
-	con, err3 := net.DialIP("ip4:udp", laddr, raddr)
-	if err1 != nil || err2 != nil || err3 != nil {
-		return errors.New(err1.Error() + err2.Error() + err3.Error())
-	}
-	defer con.Close()
+		raddr, err1 := net.ResolveIPAddr("ip4:udp", rIP.String())
+		laddr, err2 := net.ResolveIPAddr("ip4:udp", lIP.String())
+		con, err3 := net.DialIP("ip4:udp", laddr, raddr)
+		if err1 != nil || err2 != nil || err3 != nil {
+			return errors.New(err1.Error() + err2.Error() + err3.Error())
+		}
+		defer con.Close()
 
-	err := SendIPPacket(lIP, rIP, lPort, rPort, 2, 0, 17, uR)
-	return err
+		err := SendIPPacket(lIP, rIP, lPort, rPort, 2, 0, 17, uR)
+		return err
+	} else {
+		err := errors.New("the OS " + runtime.GOOS + " not bu support")
+		return err
+	}
 }

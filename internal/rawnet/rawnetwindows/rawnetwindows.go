@@ -11,8 +11,8 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// WindowsSendIPDF windows send DF ip packet
-func WindowsSendIPDF(rIP net.IP, rPort, protocol uint16, d []byte) error {
+//SendIPPacketDF windows send DF ip packet
+func SendIPPacketDF(rIP net.IP, rPort, protocol uint16, d []byte) error {
 	var wsaData windows.WSAData
 	err := windows.WSAStartup(2<<16+2, &wsaData)
 	if err != nil {
