@@ -161,8 +161,8 @@ func SendIPPacket(lIP, rIP net.IP, lPort, rPort uint16, flag, offset int, protoc
 	return nil
 }
 
-// SendDFIPPacket send DF IP Packet(UDP),need root authority
-func SendDFIPPacket(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
+// SendIPPacketDF send DF IP Packet(UDP),need root authority
+func SendIPPacketDF(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 
 	uR := PackageUDP(lIP, rIP, lPort, rPort, d)
 
