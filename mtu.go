@@ -26,6 +26,9 @@ const port uint16 = 19989
 // pingHost ping host
 const pingHost string = "baidu.com"
 
+// UpLinkFast PMTUD get MTU, more fast less reliable
+const UpLinkFast bool = true
+
 // Client client
 // if isUpLink = false, it will discover downlink's mtu, need sever support
 // discover the uplink through the PING command
@@ -59,8 +62,6 @@ func Client(isUpLink bool) (uint16, error) {
 				}
 				// cmd.Wait()
 				stdout = com.ToUtf8(stdout)
-				fmt.Println(string(stdout))
-				fmt.Println("-----------------------------")
 
 				if bytes.Contains(stdout, []byte("DF")) {
 					return 1 //too long
@@ -70,7 +71,7 @@ func Client(isUpLink bool) (uint16, error) {
 					return 0
 				}
 			}
-		} else if runtime.GOOS == "linux" || runtime.GOOS == "darwin" || runtime.GOOS == "android" {
+		} else if runtime.GOOS == "linux" {
 			wrap = append(wrap, []byte{10, 10}...) // Linux Wrap：\n=Wrap
 			F = func(l int) int {
 				cmd = exec.Command("ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-W", "1", pingHost)
@@ -85,11 +86,27 @@ func Client(isUpLink bool) (uint16, error) {
 				if err1 != nil || err2 != nil {
 					return 0
 				}
-				cmd.Wait()
+				//cmd.Wait()
 				stdout = com.ToUtf8(stdout)
 				stderr = com.ToUtf8(stderr)
 
-				if bytes.Contains(com.ToUtf8(stderr), []byte("too long")) {
+				if bytes.Contains(stderr, []byte("too long")) {
+					// ping: local error: message too long, mtu=1400
+					if UpLinkFast {
+						if bytes.Contains(stderr, []byte("mtu=")) { //// Linux Wrap：\n 10
+							a := bytes.Split(stderr, []byte("mtu="))[1]
+							for i, v := range a {
+								if v == uint8(10) {
+									fmt.Println("值：：：：：：：：：：", string(a[:i]))
+									j, err := strconv.Atoi(string(a[:i]))
+									if err != nil {
+										break
+									}
+									return j - 28
+								}
+							}
+						}
+					}
 					return 1 //too long
 				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
 					return -1 //too small
@@ -112,11 +129,11 @@ func Client(isUpLink bool) (uint16, error) {
 				if err1 != nil || err2 != nil {
 					return 0
 				}
-				cmd.Wait()
+				//cmd.Wait()
 				stdout = com.ToUtf8(stdout)
 				stderr = com.ToUtf8(stderr)
 
-				if bytes.Contains(com.ToUtf8(stderr), []byte("too long")) {
+				if bytes.Contains(stderr, []byte("too long")) {
 
 					return 1 //too long
 				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
@@ -143,11 +160,11 @@ func Client(isUpLink bool) (uint16, error) {
 				if err1 != nil || err2 != nil {
 					return 0
 				}
-				cmd.Wait()
+				//cmd.Wait()
 				stdout = com.ToUtf8(stdout)
 				stderr = com.ToUtf8(stderr)
 
-				if bytes.Contains(com.ToUtf8(stderr), []byte("too long")) {
+				if bytes.Contains(stderr, []byte("too long")) {
 
 					return 1 //too long
 				} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
@@ -168,14 +185,16 @@ func Client(isUpLink bool) (uint16, error) {
 		for {
 			mid = int(float64((left + right) / 2))
 			r := F(mid)
-			// fmt.Println(mid, left, right)
+			fmt.Println(mid, left, right)
 
 			if 1 == r { //big
 				right = mid - 1
 			} else if -1 == r { //small
 				left = mid + 1
-			} else { // r==0 error or exception
+			} else if 0 == r { // r==0 error or exception
 				break
+			} else {
+				return uint16(r), nil
 			}
 			step = right - left
 			if step <= 3 {
