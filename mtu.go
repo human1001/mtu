@@ -225,7 +225,6 @@ func Client(isUpLink bool) (uint16, error) {
 		_, err1 = conn.Write(d)
 
 		d = make([]byte, 2000)
-
 		// receive b and c
 		var getB bool = false
 		var len, step int
@@ -306,7 +305,9 @@ func Sever() error {
 	for {
 		d := make([]byte, 2000)
 		n, raddr, _ := handle.ReadFromUDP(d)
-		var bodyB, bodyC []byte = d[:37], d[:37]
+		var bodyB, bodyC []byte
+		copy(bodyB, d[:37])
+		copy(bodyC, d[:37])
 		bodyB = append(bodyB, 0xb)
 
 		fmt.Println(d[:n])
