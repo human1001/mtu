@@ -27,7 +27,7 @@ const port uint16 = 19989
 const pingHost string = "baidu.com"
 
 // UpLinkFast PMTUD get MTU, more fast less reliable
-const UpLinkFast bool = true
+const UpLinkFast bool = false
 
 // Client client
 // if isUpLink = false, it will discover downlink's mtu, need sever support
