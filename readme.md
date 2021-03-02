@@ -1,6 +1,6 @@
 # MTUdiscover
 
-[【中文】](https://github.com/lysShub/MTUdiscover/readme_zh.md)
+[【中文】](https://github.com/lysShub/MTUdiscover/blob/master/readme_zh.md)
 
 ##### NOTE:
 
@@ -12,7 +12,7 @@
 
 
 
-###### Description:
+##### Description:
 
 ​		Uplink and downlink have different MTU；discover uplink uses PING command,discover downlink need a sever. Found that the uplink mtu has requirements for the system, <font color="yellow">I only test on Android, Linux, Windows  </font>. protocol **PMTUD** is not widely supported, so it is not used.
 
