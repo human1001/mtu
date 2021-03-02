@@ -6,5 +6,6 @@ import (
 )
 
 func main() {
-	fmt.Println(mtu.Client(true))
+	// fmt.Println(mtu.Client(true))
+	fmt.Println(mtu.Sever())
 }
