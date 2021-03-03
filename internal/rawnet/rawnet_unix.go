@@ -54,8 +54,7 @@ func PackageIPHeader(lIP, rIP net.IP, lport, rport uint16, flag, offset int, pro
 // sendIPPacket except windows system
 func sendIPPacket(lIP, rIP net.IP, lPort, rPort uint16, flag, offset int, protocol uint8, d []byte) error {
 
-	udpPack := PackageUDP(lIP, rIP, lPort, rPort, d)
-	iph, err := PackageIPHeader(lIP, rIP, lPort, rPort, flag, offset, protocol, udpPack)
+	iph, err := PackageIPHeader(lIP, rIP, lPort, rPort, flag, offset, protocol, d)
 	if err != nil {
 		return err
 	}
