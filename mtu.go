@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"time"
 )
 
 // Discover the MTU of the link by UDP packet
@@ -229,30 +230,30 @@ func Client(isUpLink bool) (uint16, error) {
 		var len, step int
 
 		for i := 0; i < 15; i++ {
-			go func() {
-				getB, getC = false, false
-				for {
-					_, _, err := conn.ReadFromUDP(d)
-					if err != nil {
-						return
-					} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xc { //get c
-						len = int(d[38])<<8 + int(d[39])
-						step = int(d[40])<<8 + int(d[41])
-						getC = true
-						if getB {
-							return
-						}
-					} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xb { //get b
-						getB = true
-						if getC {
-							return
-						}
+
+			getB, getC = false, false
+			for {
+				conn.SetReadDeadline(time.Now().Add(time.Second))
+				_, _, err := conn.ReadFromUDP(d)
+				if err != nil && !(getB || getC) {
+					return 0, errors.New("sever not has reply")
+
+				} else if err != nil && getC { // too long
+					break
+				} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xc { //get c
+					len = int(d[38])<<8 + int(d[39])
+					step = int(d[40])<<8 + int(d[41])
+					getC = true
+					if getB { // get b and get c
+						break
+					}
+				} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xb { //get b
+					getB = true
+					if getC { // get b and get c
+						break
 					}
 				}
-			}()
-
-			if !getC {
-				return 0, errors.New("sever not has reply")
+				fmt.Println("读取到")
 			}
 
 			if step == 1 {
@@ -308,7 +309,7 @@ func Sever() error {
 	for {
 		d := make([]byte, 2000)
 		n, raddr, _ := handle.ReadFromUDP(d)
-		var bodyB, bodyC []byte
+		var bodyB, bodyC []byte = make([]byte, 37), make([]byte, 37)
 		copy(bodyB, d[:37])
 		copy(bodyC, d[:37])
 		bodyB = append(bodyB, 0xb)
