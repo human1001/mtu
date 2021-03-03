@@ -319,25 +319,25 @@ func Sever() error {
 		if n == 38 && d[37] == 0xa { //get a
 			fmt.Println("收到a")
 
-			tmp := make([]byte, 1000)
-			bodyB = append(bodyB, tmp...)
+			bodyB = append(bodyB, make([]byte, 1000)...)
 			bodyC = append(bodyC, 0xc, 3, 232, 3, 232) //len,step=1000
 
 		} else if n == 42 && d[37] == 0xd { // get d
 			len := int(d[38])<<8 + int(d[39])
 			step := int(d[40])<<8 + int(d[41])
 			len = len - step
-			tmp := make([]byte, len)
-			bodyB = append(bodyB, tmp...)
-			bodyC = append(bodyC, 0xd, uint8(len>>8), uint8(len), d[40], d[41])
+			bodyB = append(bodyB, make([]byte, len-step)...)
+			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
 
 		} else if n == 42 && d[37] == 0xe { //get e
+			fmt.Println("收到e")
 			len := int(d[38])<<8 + int(d[39])
 			step := int(d[40])<<8 + int(d[41])
 			len = len + step
-			tmp := make([]byte, len)
-			bodyB = append(bodyB, tmp...)
-			bodyC = append(bodyC, 0xe, uint8(len>>8), uint8(len), d[40], d[41])
+
+			bodyB = append(bodyB, make([]byte, len)...)
+
+			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
 		}
 
 		_, err := handle.WriteToUDP(bodyC, raddr) //reply c
