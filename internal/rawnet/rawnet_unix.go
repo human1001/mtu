@@ -72,7 +72,7 @@ func sendIPPacket(lIP, rIP net.IP, lPort, rPort uint16, flag, offset int, protoc
 		return err
 	}
 
-	err = rawConn.WriteTo(iph, udpPack, nil)
+	err = rawConn.WriteTo(iph, d, nil)
 	if err != nil {
 		return err
 	}
