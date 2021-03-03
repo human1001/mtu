@@ -9,9 +9,11 @@ import (
 	"mtu/internal/com"
 	"mtu/internal/rawnet"
 	"net"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
+	"time"
 )
 
 // Discover the MTU of the link by UDP packet
@@ -232,25 +234,33 @@ func Client(isUpLink bool) (uint16, error) {
 
 			getB, getC = false, false
 			for {
-				// conn.SetReadDeadline(time.Now().Add(time.Second * 2))
-				_, _, err := conn.ReadFromUDP(d)
-				if err != nil && !(getB || getC) {
-					return 0, errors.New("sever not has reply")
 
-				} else if err != nil && getC { // too long
-					fmt.Println("没有收到B而收到C，退出")
+				err := conn.SetReadDeadline(time.Now().Add(time.Second))
+				if err != nil {
+					return 0, err
+				}
+				d = make([]byte, 2000)
+				_, _, err = conn.ReadFromUDP(d)
+
+				if err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {
+					return 0, err
+
+				} else if errors.Is(err, os.ErrDeadlineExceeded) && !getC {
+					return 1, errors.New("sever not has reply")
+
+				} else if errors.Is(err, os.ErrDeadlineExceeded) && getC {
 					break
+
 				} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xc { //get c
 					len = int(d[38])<<8 + int(d[39])
 					step = int(d[40])<<8 + int(d[41])
 					getC = true
-					fmt.Println("收到C", len, step)
-					if getB { // get b and get c
+					if getB {
 						break
 					}
 				} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xb { //get b
 					getB = true
-					if getC { // get b and get c
+					if getC {
 						break
 					}
 				}
@@ -266,7 +276,6 @@ func Client(isUpLink bool) (uint16, error) {
 
 			step = step / 2
 			d = []byte(muuid)
-
 			if getB { //e
 				fmt.Println("获取到DF")
 				d = append(d, 0xe, uint8(len>>8), uint8(len), uint8(step>>8), uint8(step))
@@ -282,6 +291,7 @@ func Client(isUpLink bool) (uint16, error) {
 					return 0, err
 				}
 			}
+			fmt.Println("写入完成")
 		}
 
 	}
@@ -333,6 +343,9 @@ func Sever() error {
 			len := int(d[38])<<8 + int(d[39])
 			step := int(d[40])<<8 + int(d[41])
 			len = len - step
+			if len < 38 {
+				len = 38
+			}
 			bodyB = append(bodyB, make([]byte, len-38)...)
 			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
 			get = true
