@@ -253,7 +253,6 @@ func Client(isUpLink bool) (uint16, error) {
 						break
 					}
 				}
-				fmt.Println("读取到")
 			}
 
 			if step == 1 {
@@ -265,14 +264,16 @@ func Client(isUpLink bool) (uint16, error) {
 
 			step = step / 2
 			d = []byte(muuid)
-			// send d or e
+
 			if getB { //e
+				fmt.Println("获取到DF")
 				d = append(d, 0xe, uint8(len>>8), uint8(len), uint8(step>>8), uint8(step))
 				_, err := conn.Write(d)
 				if err != nil {
 					return 0, err
 				}
-			} else {
+			} else { // d
+				fmt.Println("没有获取到DF")
 				d = append(d, 0xd, uint8(len>>8), uint8(len), uint8(step>>8), uint8(step))
 				_, err := conn.Write(d)
 				if err != nil {
@@ -306,29 +307,32 @@ func Sever() error {
 		return err
 	}
 
+	var get bool = false
 	for {
 		d := make([]byte, 2000)
+		get = false
+
 		n, raddr, _ := handle.ReadFromUDP(d)
 		var bodyB, bodyC []byte = make([]byte, 37), make([]byte, 37)
 		copy(bodyB, d[:37])
 		copy(bodyC, d[:37])
 		bodyB = append(bodyB, 0xb)
 
-		fmt.Println(d[:n])
-
 		if n == 38 && d[37] == 0xa { //get a
 			fmt.Println("收到a")
 
 			bodyB = append(bodyB, make([]byte, 1000)...)
 			bodyC = append(bodyC, 0xc, 3, 232, 3, 232) //len,step=1000
-
+			get = true
 		} else if n == 42 && d[37] == 0xd { // get d
+			fmt.Println("收到d")
+
 			len := int(d[38])<<8 + int(d[39])
 			step := int(d[40])<<8 + int(d[41])
 			len = len - step
 			bodyB = append(bodyB, make([]byte, len-step)...)
 			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
-
+			get = true
 		} else if n == 42 && d[37] == 0xe { //get e
 			fmt.Println("收到e")
 			len := int(d[38])<<8 + int(d[39])
@@ -336,17 +340,20 @@ func Sever() error {
 			len = len + step
 
 			bodyB = append(bodyB, make([]byte, len)...)
-
 			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
+			get = true
 		}
 
-		_, err := handle.WriteToUDP(bodyC, raddr) //reply c
-		if err != nil {
-			// log error
+		if get {
+			_, err := handle.WriteToUDP(bodyC, raddr) //reply c
+			if err != nil {
+				// log error
+			}
+			err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, port, uint16(raddr.Port), bodyB) //reply b
+			if err != nil {
+				// log error
+			}
 		}
-		err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, port, uint16(raddr.Port), bodyB) //reply b
-		if err != nil {
-			// log error
-		}
+
 	}
 }

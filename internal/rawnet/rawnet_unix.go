@@ -22,29 +22,13 @@ func PackageIPHeader(lIP, rIP net.IP, lport, rport uint16, flag, offset int, pro
 	// refer https://zh.wikipedia.org/wiki/IPv4
 	// refer https://zhangbinalan.gitbooks.io/protocol/content/ipxie_yi_tou_bu.html
 
-	var f ipv4.HeaderFlags
-	if offset == 2 { //don't Fragment
-		f = ipv4.DontFragment
-		if offset != 0 {
-			err := errors.New("header flag and fragment conflict")
-			return nil, err
-		}
-	} else if offset == 1 {
-		f = 1
-	} else if offset == 0 { // END
-		f = 0
-	} else {
-		err := errors.New("incorrect flag")
-		return nil, err
-	}
-
 	iph := &ipv4.Header{
 		Version:  ipv4.Version,
 		Len:      ipv4.HeaderLen,
 		TOS:      0x00,
 		TotalLen: ipv4.HeaderLen + len(d),
 		TTL:      64,
-		Flags:    f,
+		Flags:    flag,
 		FragOff:  offset,
 		Protocol: int(protocol),
 		Checksum: 0,
