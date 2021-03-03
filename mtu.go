@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
-	"time"
 )
 
 // Discover the MTU of the link by UDP packet
@@ -233,17 +232,19 @@ func Client(isUpLink bool) (uint16, error) {
 
 			getB, getC = false, false
 			for {
-				conn.SetReadDeadline(time.Now().Add(time.Second))
+				// conn.SetReadDeadline(time.Now().Add(time.Second * 2))
 				_, _, err := conn.ReadFromUDP(d)
 				if err != nil && !(getB || getC) {
 					return 0, errors.New("sever not has reply")
 
 				} else if err != nil && getC { // too long
+					fmt.Println("没有收到B而收到C，退出")
 					break
 				} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xc { //get c
 					len = int(d[38])<<8 + int(d[39])
 					step = int(d[40])<<8 + int(d[41])
 					getC = true
+					fmt.Println("收到C", len, step)
 					if getB { // get b and get c
 						break
 					}
@@ -253,6 +254,7 @@ func Client(isUpLink bool) (uint16, error) {
 						break
 					}
 				}
+				fmt.Println("收到")
 			}
 
 			if step == 1 {
@@ -314,15 +316,16 @@ func Sever() error {
 
 		n, raddr, _ := handle.ReadFromUDP(d)
 		var bodyB, bodyC []byte = make([]byte, 37), make([]byte, 37)
-		copy(bodyB, d[:37])
-		copy(bodyC, d[:37])
+		copy(bodyB, d)
+		copy(bodyC, d)
 		bodyB = append(bodyB, 0xb)
+		fmt.Println(bodyC)
 
 		if n == 38 && d[37] == 0xa { //get a
 			fmt.Println("收到a")
 
-			bodyB = append(bodyB, make([]byte, 1000)...)
-			bodyC = append(bodyC, 0xc, 3, 232, 3, 232) //len,step=1000
+			bodyB = append(bodyB, make([]byte, 962)...) //962 + 38 = 1000
+			bodyC = append(bodyC, 0xc, 3, 232, 3, 232)  //len,step=1000
 			get = true
 		} else if n == 42 && d[37] == 0xd { // get d
 			fmt.Println("收到d")
@@ -330,7 +333,7 @@ func Sever() error {
 			len := int(d[38])<<8 + int(d[39])
 			step := int(d[40])<<8 + int(d[41])
 			len = len - step
-			bodyB = append(bodyB, make([]byte, len-step)...)
+			bodyB = append(bodyB, make([]byte, len-38)...)
 			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
 			get = true
 		} else if n == 42 && d[37] == 0xe { //get e
@@ -339,7 +342,7 @@ func Sever() error {
 			step := int(d[40])<<8 + int(d[41])
 			len = len + step
 
-			bodyB = append(bodyB, make([]byte, len)...)
+			bodyB = append(bodyB, make([]byte, len-38)...)
 			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
 			get = true
 		}
