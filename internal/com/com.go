@@ -3,9 +3,12 @@ package com
 import (
 	"bytes"
 	"errors"
+	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -15,6 +18,30 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
+// Writers file handles
+var Writers []io.Writer
+
+// Errorlog logger
+func Errorlog(err ...error) bool {
+	// writers = []io.Writer{
+	// 	errLogHandle,
+	// 	os.Stdout,
+	// }
+
+	var haveErr bool = false
+	for i, e := range err {
+		if e != nil {
+			haveErr = true
+			_, fp, ln, _ := runtime.Caller(1) //行数
+
+			w := io.MultiWriter(Writers...)
+			logger := log.New(w, "", log.Ldate|log.Ltime) //|log.Lshortfile
+			logger.Println(fp + ":" + strconv.Itoa(ln) + "." + strconv.Itoa(i+1) + "==>" + e.Error())
+		}
+	}
+	return haveErr
+}
+
 // ToUtf8 Convert to any encoding (as far as possible) to utf8 encoding
 func ToUtf8(s []byte) []byte {
 
@@ -22,7 +49,7 @@ func ToUtf8(s []byte) []byte {
 
 	d := chardet.NewTextDetector() //chardet is more precise charset.DetermineEncoding
 	var rs *chardet.Result
-	var err1 error
+	var err1, err2 error
 	if len(s) > 1024 {
 		if utf8.Valid(s[:1024]) {
 			return s
@@ -34,6 +61,7 @@ func ToUtf8(s []byte) []byte {
 		}
 		rs, err1 = d.DetectBest(s)
 	}
+	Errorlog(err1, err2)
 
 	// charset input charsets:utf-8,ibm866,iso-8859-2,iso-8859-3,iso-8859-4,iso-8859-5,iso-8859-6,iso-8859-7,iso-8859-8,iso-8859-8-i,iso-8859-10,iso-8859-13,iso-8859-14,iso-8859-15,iso-8859-16,koi8-r,koi8-u,macintosh,windows-874,windows-1250,windows-1251,windows-1252,windows-1253,windows-1254,windows-1255,windows-1256,windows-1257,windows-1258,x-mac-cyrillic,gbk,gb18030,big5,euc-jp,iso-2022-jp,shift_jis,euc-kr,replacement,utf-16be,utf-16le,x-user-defined,
 
@@ -72,7 +100,7 @@ func ToUtf8(s []byte) []byte {
 	reader, err1 := charset.NewReaderLabel(ct, byteReader)
 	r, err2 := ioutil.ReadAll(reader)
 
-	if err1 != nil || err2 != nil {
+	if Errorlog(err1, err2) {
 		return s
 	}
 	return r
@@ -86,12 +114,12 @@ func CreateUUID() string {
 }
 
 // ClientDownLink client downlink MTU
-func ClientDownLink(sever string, port uint16) (uint16, error) {
+func ClientDownLink(sever string, port uint16) uint16 {
 	raddr1, err1 := net.ResolveUDPAddr("udp", sever+":"+strconv.Itoa(int(port)))
 	laddr1, err2 := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(int(port)))
 	conn, err3 := net.DialUDP("udp", laddr1, raddr1)
-	if err1 != nil || err2 != nil || err3 != nil {
-		return 0, errors.New(err1.Error() + err2.Error() + err3.Error())
+	if Errorlog(err1, err2, err3) {
+		return 0
 	}
 	defer conn.Close()
 
@@ -112,25 +140,25 @@ func ClientDownLink(sever string, port uint16) (uint16, error) {
 		getB, getC = false, false
 		for {
 
-			err := conn.SetReadDeadline(time.Now().Add((time.Millisecond * time.Duration(delay))))
-			if err != nil {
-				return 0, err
-			}
+			err1 = conn.SetReadDeadline(time.Now().Add((time.Millisecond * time.Duration(delay))))
+			Errorlog(err1)
 			d = make([]byte, 2000)
-			_, _, err = conn.ReadFromUDP(d)
+			_, _, err1 = conn.ReadFromUDP(d)
 
 			if s != 0 && string(d[:37]) == muuid {
 				delay = (5 * (time.Now().UnixNano() - s) / 1e6) / 2
 				s = 0
 			}
 
-			if err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {
-				return 0, err
+			if err1 != nil && !errors.Is(err1, os.ErrDeadlineExceeded) {
+				Errorlog(err1)
+				return 0
 
-			} else if errors.Is(err, os.ErrDeadlineExceeded) && !getC {
-				return 0, errors.New("Server offline or Network fluctuations")
+			} else if errors.Is(err1, os.ErrDeadlineExceeded) && !getC {
+				Errorlog(errors.New("Server offline or Network fluctuations"))
+				return 0
 
-			} else if errors.Is(err, os.ErrDeadlineExceeded) && getC {
+			} else if errors.Is(err1, os.ErrDeadlineExceeded) && getC {
 				break
 
 			} else if err1 == nil && string(d[:37]) == muuid && d[37] == 0xc { //get c
@@ -150,29 +178,29 @@ func ClientDownLink(sever string, port uint16) (uint16, error) {
 
 		if step == 1 {
 			if getB {
-				return uint16(len), nil
+				return uint16(len)
 			}
-			return uint16(len - 1), nil
+			return uint16(len - 1)
 		}
 		step = step / 2
 		d = []byte(muuid)
 		if getB { //e
 
 			d = append(d, 0xe, uint8(len>>8), uint8(len), uint8(step>>8), uint8(step))
-			_, err := conn.Write(d)
-			if err != nil {
-				return 0, err
+			_, err1 = conn.Write(d)
+			if Errorlog(err1) {
+				return 0
 			}
 		} else { // d
 
 			d = append(d, 0xd, uint8(len>>8), uint8(len), uint8(step>>8), uint8(step))
-			_, err := conn.Write(d)
-			if err != nil {
-				return 0, err
+			_, err1 = conn.Write(d)
+			if Errorlog(err1) {
+				return 0
 			}
 		}
 	}
-	return 0, errors.New("Exception")
+	return 0
 }
 
 // fast uplink fast mode; faster and less reliable
@@ -200,33 +228,33 @@ func pingDF(l int, pingHost string, faster bool) (int, error) {
 }
 
 // ClientUpLink client uplink
-func ClientUpLink(pingHost string, faster bool) (uint16, error) {
+func ClientUpLink(pingHost string, faster bool) uint16 {
 	if faster {
 		var f int
 		for i := 1472; i <= 1473; i++ {
 			r, err := pingDF(i, pingHost, true)
-			if err != nil {
-				return 0, err
+			if Errorlog(err) {
+				return 0
 			} else if err == nil && r > 1 {
-				return uint16(r), nil
+				return uint16(r)
 			}
 			f += r
 		}
 		if f == 0 {
-			return 1472, nil
+			return 1472
 		}
 		f = 0
 		for i := 1372; i <= 1373; i++ {
 			r, err := pingDF(i, pingHost, false)
-			if err != nil {
-				return 0, err
+			if Errorlog(err) {
+				return 0
 			} else if err == nil && r > 1 {
-				return uint16(r), nil
+				return uint16(r)
 			}
 			f += r
 		}
 		if f == 0 {
-			return 1372, nil
+			return 1372
 		}
 	}
 
@@ -235,8 +263,8 @@ func ClientUpLink(pingHost string, faster bool) (uint16, error) {
 	for {
 		mid = int(float64((left + right) / 2))
 		r, err := pingDF(mid, pingHost, faster)
-		if err != nil {
-			return 0, err
+		if Errorlog(err) {
+			return 0
 		}
 
 		if 1 == r { //big
@@ -246,19 +274,19 @@ func ClientUpLink(pingHost string, faster bool) (uint16, error) {
 		} else if 0 == r { // r==0 error or exception
 			break
 		} else {
-			return uint16(r), nil
+			return uint16(r)
 		}
 		step = right - left
 		if step <= 3 {
 			for i := right + 1; i <= left; i-- {
 				n, err := pingDF(i, pingHost, faster)
 				if n == -1 {
-					return uint16(i), nil
-				} else if err != nil {
-					return 0, err
+					return uint16(i)
+				} else if Errorlog(err) {
+					return 0
 				}
 			}
 		}
 	}
-	return 0, nil
+	return 0
 }

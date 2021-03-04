@@ -23,7 +23,7 @@ const pingHost string = "baidu.com"
 // if isUpLink = false, it will discover downlink's mtu, need sever support
 // discover the uplink through the PING command
 // may block for ten seconds; for example, PING command didn't replay
-func Client(isUpLink bool, UpLinkFast bool) (uint16, error) {
+func Client(isUpLink bool, UpLinkFast bool) uint16 {
 
 	if isUpLink {
 		//Uplink ping
