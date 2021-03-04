@@ -24,7 +24,7 @@
 
 ##### start:
 
-​	**condition:** Golang and GO111MODULE=on
+​	Golang >=go1.15 ;  GO111MODULE=on
 
 ​	**get uplink mtu:**
 

@@ -3,7 +3,6 @@ package com
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -122,7 +121,6 @@ func ClientDownLink(sever string, port uint16) (uint16, error) {
 
 			if s != 0 && string(d[:37]) == muuid {
 				delay = (5 * (time.Now().UnixNano() - s) / 1e6) / 2
-				fmt.Println("delay", delay)
 				s = 0
 			}
 
@@ -156,7 +154,6 @@ func ClientDownLink(sever string, port uint16) (uint16, error) {
 			}
 			return uint16(len - 1), nil
 		}
-		fmt.Println(step)
 		step = step / 2
 		d = []byte(muuid)
 		if getB { //e
@@ -207,9 +204,11 @@ func ClientUpLink(pingHost string, faster bool) (uint16, error) {
 	if faster {
 		var f int
 		for i := 1472; i <= 1473; i++ {
-			r, err := pingDF(i, pingHost, false)
+			r, err := pingDF(i, pingHost, true)
 			if err != nil {
 				return 0, err
+			} else if err == nil && r > 1 {
+				return uint16(r), nil
 			}
 			f += r
 		}
@@ -221,6 +220,8 @@ func ClientUpLink(pingHost string, faster bool) (uint16, error) {
 			r, err := pingDF(i, pingHost, false)
 			if err != nil {
 				return 0, err
+			} else if err == nil && r > 1 {
+				return uint16(r), nil
 			}
 			f += r
 		}

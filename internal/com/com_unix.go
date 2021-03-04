@@ -12,7 +12,9 @@ import (
 
 // subPingDF linux
 func subPingDF(l int, pingHost string, faster bool) (int, error) {
+
 	cmd := exec.Command("/bin/ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-w", "1", pingHost)
+
 	Out, err1 := cmd.StdoutPipe()
 	Err, err2 := cmd.StderrPipe()
 	if err1 != nil || err2 != nil {
@@ -21,9 +23,12 @@ func subPingDF(l int, pingHost string, faster bool) (int, error) {
 	cmd.Start()
 	stdout, err1 := ioutil.ReadAll(Out)
 	stderr, err2 := ioutil.ReadAll(Err)
+	Out.Close()
+
 	if err1 != nil || err2 != nil {
 		return 0, errors.New(err1.Error() + err2.Error())
 	}
+
 	//cmd.Wait()
 
 	stdout = ToUtf8(stdout)

@@ -13,7 +13,7 @@ import (
 // subPingDF darwin
 func subPingDF(l int, pingHost string, faster bool) (int, error) {
 
-	cmd := exec.Command("cmd", "/C", "ping", "-c", "1", "-t", "1", "-D", "-s", strconv.Itoa(l), pingHost)
+	cmd := exec.Command("ping", "-D", "-c", "1", "-s", strconv.Itoa(l), "-t", "1", pingHost)
 	Out, err1 := cmd.StdoutPipe()
 	Err, err2 := cmd.StderrPipe()
 	if err1 != nil || err2 != nil {
@@ -33,9 +33,10 @@ func subPingDF(l int, pingHost string, faster bool) (int, error) {
 		return 1, nil
 
 	} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
-		// PING baidu.com (39.156.69.79) 1000(1028) bytes of data.
-		// 1008 bytes from 39.156.69.79: icmp_seq=1 ttl=51 time=85.3 ms
 		return -1, nil //too small
+	} else if bytes.Contains(stdout, []byte("100.0%")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
+		// sometimes, too long will don't echo "too long" instead timeout
+		return 1, nil //too long
 	} else {
 		return 0, nil
 	}
