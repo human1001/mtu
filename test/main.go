@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	fmt.Println("开始")
-	fmt.Println(mtu.Client(true, true))
-	// fmt.Println(mtu.Sever())
+	fmt.Println("_________:")
+	// fmt.Println(mtu.Client(true, true))
+	fmt.Println(mtu.Sever())
 }
