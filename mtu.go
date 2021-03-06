@@ -10,14 +10,14 @@ import (
 
 // Discover the MTU of the link by UDP packet
 
-// sever sever addr, ip or domain
-const sever string = "114.116.254.26"
-
-// port port used by the server and client
-const port uint16 = 19989
-
-// pingHost ping host
-const pingHost string = "baidu.com"
+var (
+	// SeverAddr  ip or domain
+	SeverAddr string = ""
+	// Port used by the server and client
+	Port uint16 = 19986
+	// PingHost ping host
+	PingHost string = "baidu.com"
+)
 
 // Client client
 // if isUpLink = false, it will discover downlink's mtu, need sever support
@@ -28,11 +28,11 @@ func Client(isUpLink bool, UpLinkFast bool) uint16 {
 	if isUpLink {
 		//Uplink ping
 
-		return com.ClientUpLink(pingHost, UpLinkFast)
+		return com.ClientUpLink(PingHost, UpLinkFast)
 	}
 
 	//Downlink
-	return com.ClientDownLink(sever, port)
+	return com.ClientDownLink(SeverAddr, Port)
 
 }
 
@@ -41,7 +41,7 @@ func Client(isUpLink bool, UpLinkFast bool) uint16 {
 //
 func Sever() error {
 
-	laddr, err1 := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(int(port)))
+	laddr, err1 := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(int(Port)))
 	handle, err2 := net.ListenUDP("udp", laddr)
 	if err1 != nil || err2 != nil {
 		// log error
@@ -103,7 +103,7 @@ func Sever() error {
 			if err != nil {
 				// log error
 			}
-			err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, port, uint16(raddr.Port), bodyB) //reply b
+			err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, Port, uint16(raddr.Port), bodyB) //reply b
 			if err != nil {
 				// log error
 			}

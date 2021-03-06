@@ -12,9 +12,11 @@ func main() {
 	com.Writers = []io.Writer{
 		os.Stdout,
 	}
-	// 啊啊
+
+	mtu.PingHost = "baidu.com"
+	mtu.Port = uint16(19986)
 
 	fmt.Println("_________:")
 	fmt.Println(mtu.Client(true, true))
-	// fmt.Println(mtu.Sever())
+	// fmt.Println(m.Sever())
 }

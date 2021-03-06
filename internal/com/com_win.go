@@ -4,7 +4,6 @@ package com
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"strconv"
@@ -33,7 +32,6 @@ func subPingDF(l int, pingHost string, faster bool) (int, error) {
 	} else if bytes.Contains(stdout, []byte("ms")) && bytes.Contains(stdout, []byte(strconv.Itoa(l))) {
 		return -1, nil //too small
 	} else {
-		fmt.Println("return 0")
 		return 0, nil
 	}
 
