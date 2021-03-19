@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"io"
-	"mtu"
-	"mtu/internal/com"
 	"os"
+
+	"github.com/lysShub/mtu"
+	"github.com/lysShub/mtu/internal/com"
 )
 
 func main() {

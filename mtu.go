@@ -12,13 +12,13 @@ import (
 // Discover the MTU of the link by UDP packet
 
 type Mtu struct {
-	// Port used by the server and client, must, default 19986
-	Port uint16
 
 	// PingHost ping host, for uplink, default baidu.com
 	PingHost string
 	// SeverAddr  ip or domain, for downlink
 	SeverAddr string
+	// Port used by the server and client, for downlink, default 19986
+	Port uint16
 }
 
 // var (
