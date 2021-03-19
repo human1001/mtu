@@ -2,46 +2,64 @@ package mtu
 
 import (
 	"errors"
-	"mtu/internal/com"
-	"mtu/internal/rawnet"
 	"net"
 	"strconv"
+
+	"github.com/lysShub/mtu/internal/com"
+	"github.com/lysShub/mtu/internal/rawnet"
 )
 
 // Discover the MTU of the link by UDP packet
 
-var (
-	// SeverAddr  ip or domain
-	SeverAddr string = ""
-	// Port used by the server and client
-	Port uint16 = 19986
-	// PingHost ping host
-	PingHost string = "baidu.com"
-)
+type Mtu struct {
+	// Port used by the server and client, must, default 19986
+	Port uint16
+
+	// PingHost ping host, for uplink, default baidu.com
+	PingHost string
+	// SeverAddr  ip or domain, for downlink
+	SeverAddr string
+}
+
+// var (
+// 	// SeverAddr  ip or domain
+// 	SeverAddr string = ""
+// 	// Port used by the server and client
+// 	Port uint16 = 19986
+// 	// PingHost ping host
+// 	PingHost string = "baidu.com"
+// )
+
+func (m *Mtu) init() {
+	if m.PingHost == "" {
+		m.PingHost = "baidu.com"
+	}
+	if m.Port == 0 {
+		m.Port = 19986
+	}
+}
 
 // Client client
 // if isUpLink = false, it will discover downlink's mtu, need sever support
 // discover the uplink through the PING command
-// may block for ten seconds; for example, PING command didn't replay
-func Client(isUpLink bool, UpLinkFast bool) uint16 {
+// uplink may block for ten seconds; for example, PING command didn't replay
+func (m *Mtu) Client(isUpLink bool, UpLinkFast bool) uint16 {
 
 	if isUpLink {
 		//Uplink ping
-
-		return com.ClientUpLink(PingHost, UpLinkFast)
+		return com.ClientUpLink(m.PingHost, UpLinkFast)
 	}
 
 	//Downlink
-	return com.ClientDownLink(SeverAddr, Port)
+	return com.ClientDownLink(m.SeverAddr, m.Port)
 
 }
 
 // Sever sever need root authority, remember open UDP port
 // detect downlink MTU by sending IP(DF) packets
-//
-func Sever() error {
+func (m *Mtu) Sever() error {
 
-	laddr, err1 := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(int(Port)))
+	laddr, err1 := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(int(m.Port)))
 	handle, err2 := net.ListenUDP("udp", laddr)
 	if err1 != nil || err2 != nil {
 		// log error
@@ -103,7 +121,7 @@ func Sever() error {
 			if err != nil {
 				// log error
 			}
-			err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, Port, uint16(raddr.Port), bodyB) //reply b
+			err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, m.Port, uint16(raddr.Port), bodyB) //reply b
 			if err != nil {
 				// log error
 			}
