@@ -31,8 +31,9 @@ func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 	if err != nil {
 		return err
 	}
+
 	var aOptVal bool = true
-	err = windows.Setsockopt(sh, windows.IPPROTO_IP, 14, (*byte)(unsafe.Pointer(&aOptVal)), int32(unsafe.Sizeof(aOptVal)))
+	err = windows.Setsockopt(sh, windows.IPPROTO_IP, 14, (*byte)(unsafe.Pointer(&aOptVal)), int32(unsafe.Sizeof(aOptVal))) // 不分包
 	if err != nil {
 		return err
 	}

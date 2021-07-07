@@ -11,8 +11,9 @@ import (
 
 func main() {
 	com.Writers = []io.Writer{
-		os.Stdout,
+		os.Stdout, // 日志
 	}
+	mtu := new(mtu.Mtu)
 
 	mtu.PingHost = "baidu.com"
 	mtu.Port = uint16(19986)
