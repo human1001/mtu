@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	1
+
 	m := mtu.NewMTU(func(m *mtu.MTU) *mtu.MTU {
 		m.PingHost = "baidu.com"
 		return m
