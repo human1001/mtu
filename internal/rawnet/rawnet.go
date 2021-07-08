@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+var err error
+
 //  checkSum check sum
 func checkSum(d []byte) uint16 {
 	var S uint32
@@ -57,16 +59,14 @@ func PackageUDP(laddr, raddr net.IP, lport, rport uint16, d []byte) []byte {
 	return P[12:] //不包括伪头
 }
 
-// GetLocalIP Get LAN IPv4
+// GetLocalIP 获取内网IP
 func GetLocalIP() net.IP {
-	raddr, err1 := net.ResolveUDPAddr("udp4", "120.120.120.120:438")
-	laddr, err2 := net.ResolveUDPAddr("udp4", ":")
-	con, err3 := net.DialUDP("udp4", laddr, raddr)
-	if err1 != nil || err2 != nil || err3 != nil {
+	var conn net.Conn
+	if conn, err = net.Dial("udp", "114.114.114.114:80"); err != nil {
 		return nil
 	}
-	defer con.Close()
-	return net.ParseIP(strings.Split(con.LocalAddr().String(), ":")[0])
+	defer conn.Close()
+	return net.ParseIP(strings.Split(conn.LocalAddr().String(), ":")[0])
 }
 
 // SendIPPacketDFUDP send DF IP(UDP) packet

@@ -3,6 +3,9 @@
 github.com/gogs/chardet
 # github.com/google/gopacket v1.1.19
 ## explicit
+# github.com/lysShub/e v0.1.4
+## explicit
+github.com/lysShub/e
 # github.com/satori/go.uuid v1.2.0
 ## explicit
 github.com/satori/go.uuid

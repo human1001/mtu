@@ -1,131 +1,46 @@
 package mtu
 
-import (
-	"errors"
-	"net"
-	"strconv"
+var err error
 
-	"github.com/lysShub/mtu/internal/com"
-	"github.com/lysShub/mtu/internal/rawnet"
-)
+type MTU struct {
 
-// Discover the MTU of the link by UDP packet
-
-type Mtu struct {
-
-	// PingHost ping host, for uplink, default baidu.com
+	// PingHost PING命令请求地址, 默认baidu.com
 	PingHost string
-	// SeverAddr  ip or domain, for downlink
+	// SeverAddr  IP或域名, 探测上行MTU设置
 	SeverAddr string
-	// Port used by the server and client, for downlink, default 19986
-	Port uint16
+	// Port 使用端口(UDP), 探测下行链路设置, 默认 19986
+	Port int
 }
 
-// var (
-// 	// SeverAddr  ip or domain
-// 	SeverAddr string = ""
-// 	// Port used by the server and client
-// 	Port uint16 = 19986
-// 	// PingHost ping host
-// 	PingHost string = "baidu.com"
-// )
+func NewMTU(f func(m *MTU) *MTU) *MTU {
 
-func (m *Mtu) init() {
+	var m = new(MTU)
+	m = f(m)
 	if m.PingHost == "" {
 		m.PingHost = "baidu.com"
 	}
 	if m.Port == 0 {
 		m.Port = 19986
 	}
+	return m
 }
 
-// Client client
-// if isUpLink = false, it will discover downlink's mtu, need sever support
-// discover the uplink through the PING command
-// uplink may block for ten seconds; for example, PING command didn't replay
-func (m *Mtu) Client(isUpLink bool, UpLinkFast bool) uint16 {
+// Client 客户端
+// 当 fastMode = true时, 将采用命令行告知的MTU, 如：ping: local error: message too long, mtu=1400
+func (m *MTU) Client(isUpLink bool, fastMode bool) (uint16, error) {
 
 	if isUpLink {
 		//Uplink ping
-		return com.ClientUpLink(m.PingHost, UpLinkFast)
+		return clientUpLink(m.PingHost, fastMode)
+	} else {
+		//Downlink
+		return clientDownLink(m.SeverAddr, m.Port)
 	}
-
-	//Downlink
-	return com.ClientDownLink(m.SeverAddr, m.Port)
-
 }
 
-// Sever sever need root authority, remember open UDP port
-// detect downlink MTU by sending IP(DF) packets
-func (m *Mtu) Sever() error {
+// Sever 服务, 探测下行链路需要
+//  需要root权限
+func (m *MTU) Sever() error {
 
-	laddr, err1 := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(int(m.Port)))
-	handle, err2 := net.ListenUDP("udp", laddr)
-	if err1 != nil || err2 != nil {
-		// log error
-		return errors.New(err1.Error() + err2.Error())
-	}
-	defer handle.Close()
-
-	lIP := rawnet.GetLocalIP()
-	if lIP == nil {
-		err := errors.New("can't get local IP or network card name")
-		// log error
-		return err
-	}
-
-	var get bool = false
-	var bodyB, bodyC []byte
-	for {
-		d := make([]byte, 2000)
-		get = false
-
-		n, raddr, err := handle.ReadFromUDP(d)
-		if err != nil {
-			// log error
-		}
-		bodyB, bodyC = make([]byte, 37), make([]byte, 37)
-		copy(bodyB, d)
-		copy(bodyC, d)
-		bodyB = append(bodyB, 0xb)
-
-		if n == 38 && d[37] == 0xa { //get a
-
-			bodyB = append(bodyB, make([]byte, 962)...) //962 + 38 = 1000
-			bodyC = append(bodyC, 0xc, 3, 232, 3, 232)  //len,step=1000
-			get = true
-		} else if n == 42 && d[37] == 0xd { // get d
-
-			len := int(d[38])<<8 + int(d[39])
-			step := int(d[40])<<8 + int(d[41])
-			len = len - step
-			if len < 38 {
-				len = 38
-			}
-			bodyB = append(bodyB, make([]byte, len-38)...)
-			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
-			get = true
-		} else if n == 42 && d[37] == 0xe { //get e
-
-			len := int(d[38])<<8 + int(d[39])
-			step := int(d[40])<<8 + int(d[41])
-			len = len + step
-
-			bodyB = append(bodyB, make([]byte, len-38)...)
-			bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
-			get = true
-		}
-
-		if get {
-			_, err := handle.WriteToUDP(bodyC, raddr) //reply c
-			if err != nil {
-				// log error
-			}
-			err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, m.Port, uint16(raddr.Port), bodyB) //reply b
-			if err != nil {
-				// log error
-			}
-		}
-
-	}
+	return m.sever()
 }

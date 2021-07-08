@@ -2,23 +2,21 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/lysShub/mtu"
-	"github.com/lysShub/mtu/internal/com"
 )
 
 func main() {
-	com.Writers = []io.Writer{
-		os.Stdout, // 日志
-	}
-	mtu := new(mtu.Mtu)
 
-	mtu.PingHost = "baidu.com"
-	mtu.Port = uint16(19986)
+	m := mtu.NewMTU(func(m *mtu.MTU) *mtu.MTU {
+		m.PingHost = "baidu.com"
+		return m
+	})
 
-	fmt.Println("_________:")
-	fmt.Println(mtu.Client(true, true))
+	// mtu.PingHost = "baidu.com"
+	// mtu.Port = (19986)
+
+	fmt.Println("开始:")
+	fmt.Println(m.Client(true, false))
 	// fmt.Println(m.Sever())
 }

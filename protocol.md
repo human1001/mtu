@@ -1,18 +1,15 @@
-###### 上行链路MTU发现策略
+###### 上行链路MTU发现协议
 
-使用UDP数据包
+​    使用二分法，基于UDP数据包
 
 | 发送者       | 接受者       | 数据             | 说明                                                         |
 | ------------ | ------------ | ---------------- | ------------------------------------------------------------ |
-| client:19989 | sever:19989  | Muuid:a          | 探测下行MTU，sever接到此数据包后将发送DF IP(UDP)包(b)和c     |
-| sever:19989  | client:19989 | Muuid: b:....    | 发送的DF IP(UDP)包                                           |
-| sever:19989  | client:19989 | Muuid:c:len:step | 在b之后延时30ms发送，表示sever发送了长度为len+28(udp header+ip header)的DF IP数据包，不能收到则判定大于mtu(d)，能收到则发送更大的数据包(e) |
-| client:19989 | sever:19989  | Muuid:d:len:step | sever收到此数据包将回复len-step长度的UDP(DF)包               |
-| client:19989 | sever:19989  | Muuid:e:len:step | sever收到此数据包将回复len+step长度的UDP(DF)包               |
+| sever:19989  | client:19989 | 1:stuff          | 发送的DF IP(UDP)包                                           |
+| sever:19989  | client:19989 | 2:len:step:stuff | 在1之后延时50ms发送，client不能收到则3，能收到则4。len和step字段各占2字节，len表示1数据长度 |
+| client:19989 | sever:19989  | 3:len:step       | 未收到1、step取半，sever收到此数据包将回复len-step长度的1和对应的2 |
+| client:19989 | sever:19989  | 4:len:step       | 收到1、step取半，，sever收到此数据包将回复len+step长度的1和对应的2 |
 
 说明：
 
-​		数据栏中`...`表示任意数据；`:`实际不存在，便于阅读用。client回复的step(d、e)等于收到的step(c)整除以2。当client收到的step等于1时可得出mtu。len和step各占两个字节。
-
-​		Muuid为唯一id标识，无必要、属设计缺陷，但被保留。
+​		数据包1和2是“一对”，发送1后延时30ms发送2；stuff字段是任意数据、用于填充，填充后整个UDP数据包中数据不会大小等于len
 
