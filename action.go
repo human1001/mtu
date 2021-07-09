@@ -8,6 +8,7 @@ import (
 	"github.com/lysShub/e"
 	"github.com/lysShub/mtu/internal/ping"
 	"github.com/lysShub/mtu/internal/rawnet"
+	"github.com/lysShub/tq"
 )
 
 // clientDownLink 下行链路MTU
@@ -156,13 +157,18 @@ func (m *MTU) sever() error {
 	}
 	defer conn.Close()
 
+	Q := new(tq.TQ) // 时间任务队列
+	Q.Run()
+
+	var id int64
+	var s map[int64]w
+
 	var lIP net.IP
 	if lIP = rawnet.GetLocalIP(); lIP == nil {
 		return errors.New("can't get local IP")
 	}
 
-	var length, step int
-	var ch chan []byte = make(chan []byte)
+	var length, newLength, step int
 	go func() {
 		var da, stuff []byte = make([]byte, 64), make([]byte, 0)
 		var raddr *net.UDPAddr
@@ -171,23 +177,42 @@ func (m *MTU) sever() error {
 			if n, raddr, err = conn.ReadFromUDP(da); !e.Errlog(err) && n >= 5 {
 
 				length, step = int(da[1])<<8+int(da[2]), int(da[3])<<8+int(da[4])
-				if length-step >= 0 {
+				if length-step >= 1 {
 					if da[0] == 3 { // 减
-						stuff = make([]byte, length-step-1)
+						newLength = length - step
 					} else if da[0] == 4 { // 加
-						stuff = make([]byte, length+step-1)
+						newLength = length + step
 					}
+					stuff = make([]byte, newLength-1)
 					e.Errlog(rawnet.SendIPPacketDFUDP(lIP, raddr.IP, uint16(m.Port), uint16(raddr.Port), append([]byte{1}, stuff...)))
-					ch <- nil
-				}
 
+					var t w
+					t.length = newLength
+					t.data = []byte{2, byte(newLength >> 8), byte(newLength), byte(step >> 8), byte(step)}
+					t.raddr = *raddr
+					s[id] = t
+					Q.Add(tq.Ts{
+						T: time.Now().Add(time.Millisecond * 50),
+						P: id,
+					})
+					id++ // 不超过int64容量
+				}
 			}
 		}
 	}()
 
 	// 发送 2
+	var r interface{}
+	for {
+		r = <-(Q.MQ)
+		v, ok := r.(int64)
+		if ok {
+			raddr := s[v].raddr
 
-	return nil
+			_, err = conn.WriteToUDP(append(s[v].data, make([]byte, s[v].length-len(s[v].data))...), &raddr)
+			e.Errlog(err)
+		}
+	}
 
 	// var get bool = false
 	// var bodyB, bodyC []byte
@@ -243,4 +268,10 @@ func (m *MTU) sever() error {
 	// }
 
 	return nil
+}
+
+type w struct {
+	raddr  net.UDPAddr
+	data   []byte
+	length int
 }

@@ -6,6 +6,9 @@ github.com/gogs/chardet
 # github.com/lysShub/e v0.1.4
 ## explicit
 github.com/lysShub/e
+# github.com/lysShub/tq v0.2.0
+## explicit
+github.com/lysShub/tq
 # github.com/satori/go.uuid v1.2.0
 ## explicit
 github.com/satori/go.uuid
