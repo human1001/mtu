@@ -2,11 +2,8 @@ package com
 
 import (
 	"bytes"
-	"io"
 	"io/ioutil"
-	"log"
-	"runtime"
-	"strconv"
+	"net"
 	"unicode/utf8"
 
 	"github.com/gogs/chardet"
@@ -14,28 +11,17 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
-// Writers file handles
-var Writers []io.Writer
-
-// Errorlog logger
-func Errorlog1(err ...error) bool {
-	// writers = []io.Writer{
-	// 	errLogHandle,
-	// 	os.Stdout,
-	// }
-
-	var haveErr bool = false
-	for i, e := range err {
-		if e != nil {
-			haveErr = true
-			_, fp, ln, _ := runtime.Caller(1) //行数
-
-			w := io.MultiWriter(Writers...)
-			logger := log.New(w, "", log.Ldate|log.Ltime) //|log.Lshortfile
-			logger.Println(fp + ":" + strconv.Itoa(ln) + "." + strconv.Itoa(i+1) + "==>" + e.Error())
+func ToIP(addr string) (net.IP, error) {
+	var ip net.IP = net.ParseIP(addr)
+	if ip == nil {
+		if ips, err := net.LookupIP(addr); err != nil {
+			return nil, err
+		} else {
+			return ips[0], nil
 		}
+	} else {
+		return ip, nil
 	}
-	return haveErr
 }
 
 // ToUtf8 Convert to any encoding (as far as possible) to utf8 encoding

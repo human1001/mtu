@@ -1,5 +1,11 @@
 package mtu
 
+import (
+	"errors"
+
+	"github.com/lysShub/mtu/internal/com"
+)
+
 var err error
 
 type MTU struct {
@@ -26,7 +32,7 @@ func NewMTU(f func(m *MTU) *MTU) *MTU {
 }
 
 // Client 客户端
-// 当 fastMode = true时, 将采用命令行告知的MTU, 如：ping: local error: message too long, mtu=1400
+//  只有探测上行链路时fastMode才有效；当 fastMode = true时, 将直接采用告知的MTU。如ICMP太大时,Ubuntu会提示：ping: local error: message too long, mtu=1400
 func (m *MTU) Client(isUpLink bool, fastMode bool) (uint16, error) {
 
 	if isUpLink {
@@ -34,12 +40,20 @@ func (m *MTU) Client(isUpLink bool, fastMode bool) (uint16, error) {
 		return clientUpLink(m.PingHost, fastMode)
 	} else {
 		//Downlink
+		if m.SeverAddr == "" {
+			return 0, errors.New("must set MTU.SeverAddr")
+		}
+		if ip, err := com.ToIP(m.SeverAddr); err != nil {
+			return 0, err
+		} else {
+			m.SeverAddr = ip.String() //最终SeverAddr的是IP
+		}
 		return clientDownLink(m.SeverAddr, m.Port)
 	}
 }
 
 // Sever 服务, 探测下行链路需要
-//  需要root权限
+//  需要发送自定义IP包, 需要root权限运行
 func (m *MTU) Sever() error {
 
 	return m.sever()
