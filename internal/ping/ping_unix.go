@@ -5,9 +5,11 @@ package ping
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"os/exec"
 	"strconv"
+
+	"github.com/lysShub/mtu/internal/com"
 )
 
 // subPingDF linux
@@ -17,6 +19,14 @@ func subPingDF(l int, pingHost string, faster bool) (int, error) {
 	da, _ := exec.Command("/bin/ping", "-M", "do", "-c", "1", "-s", strconv.Itoa(l), "-w", "1", pingHost).CombinedOutput()
 
 	da = com.ToUtf8(da)
+
+	fmt.Println()
+	fmt.Println()
+	fmt.Println()
+	fmt.Println(string(da))
+	fmt.Println()
+	fmt.Println()
+	fmt.Println()
 
 	if bytes.Contains(da, []byte("too long")) {
 		// ping: local error: message too long, mtu=1400
