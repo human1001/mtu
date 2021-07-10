@@ -9,11 +9,9 @@ import (
 var err error
 
 type MTU struct {
+	PingHost  string // 探测上行MTU时设置, PING命令请求地址, 默认baidu.com
+	SeverAddr string // 下行MTU时设置, 服务器IP或域名
 
-	// PingHost PING命令请求地址, 默认baidu.com
-	PingHost string
-	// SeverAddr  IP或域名, 探测上行MTU设置
-	SeverAddr string
 	// Port 使用端口(UDP), 探测下行链路设置, 默认 19986
 	Port int
 }
@@ -53,7 +51,8 @@ func (m *MTU) Client(isUpLink bool, fastMode bool) (uint16, error) {
 }
 
 // Sever 服务, 探测下行链路需要
-//  需要发送自定义IP包, 需要root权限运行
+//  需要发送自定义IP包, 需要root权限运行。
+//  确保服务器的上行MTU足够大, 否则探测下行MTU的结果可能偏小
 func (m *MTU) Sever() error {
 
 	return m.sever()

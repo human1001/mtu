@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/lysShub/e"
@@ -49,7 +50,7 @@ func clientDownLink(sever string, port int) (uint16, error) {
 					if tmpStep <= step {
 						length, step = int(da[1])<<8+int(da[2]), int(da[3])<<8+int(da[4])
 
-						fmt.Println("进入", length)
+						fmt.Println("进入", length, length <= MaxDFlen)
 						if step <= 1 {
 							if length <= MaxDFlen { // 能收到
 								mtu = uint16(length)
@@ -76,11 +77,11 @@ func clientDownLink(sever string, port int) (uint16, error) {
 			if _, err = conn.Write(data); err != nil {
 				return 0, err
 			}
+			time.Sleep(time.Millisecond * 10) // 50
 		} else {
 			data = <-daCh
 			i = 0
 		}
-		time.Sleep(time.Millisecond * 100) // 50
 	}
 	if mtu == 0 {
 		return 0, errors.New("sever timeout")
@@ -178,7 +179,8 @@ func (m *MTU) sever() error {
 	go func() {
 		var da, stuff []byte = make([]byte, 64), make([]byte, 0)
 		var raddr *net.UDPAddr
-		var n int
+		var n, severMtu int = 0, 2000
+		var delay time.Time
 		for {
 			if n, raddr, err = conn.ReadFromUDP(da); !e.Errlog(err) && n >= 5 {
 
@@ -192,14 +194,28 @@ func (m *MTU) sever() error {
 						newLength = length + step
 					}
 					stuff = make([]byte, newLength-1)
-					e.Errlog(rawnet.SendIPPacketDFUDP(lIP, raddr.IP, uint16(m.Port), uint16(raddr.Port), append([]byte{1}, stuff...)))
+
+					if newLength < severMtu {
+						err = rawnet.SendIPPacketDFUDP(lIP, raddr.IP, uint16(m.Port), uint16(raddr.Port), append([]byte{1}, stuff...))
+						if err != nil {
+							if strings.Contains(err.Error(), "message too long") {
+								severMtu = newLength
+							} else {
+								e.Errlog(err)
+							}
+						} else {
+							delay = time.Now().Add(time.Millisecond * 30)
+						}
+					} else {
+						delay = time.Now().Add(time.Millisecond * 0)
+					}
 
 					var t w
 					t.data = []byte{2, byte(newLength >> 8), byte(newLength), byte(step >> 8), byte(step)}
 					t.raddr = *raddr
 					s[id] = t
 					Q.Add(tq.Ts{
-						T: time.Now().Add(time.Millisecond * 50),
+						T: delay,
 						P: id,
 					})
 					id++ // 不超过int64容量
@@ -220,61 +236,6 @@ func (m *MTU) sever() error {
 			e.Errlog(err)
 		}
 	}
-
-	// var get bool = false
-	// var bodyB, bodyC []byte
-	// var n int
-	// var raddr *net.UDPAddr
-	// for {
-	// 	d := make([]byte, 2000)
-	// 	get = false
-
-	// 	if n, raddr, err = conn.ReadFromUDP(d); e.Errlog(err) {
-	// 		continue
-	// 	}
-
-	// 	bodyB, bodyC = make([]byte, 37), make([]byte, 37)
-	// 	copy(bodyB, d)
-	// 	copy(bodyC, d)
-	// 	bodyB = append(bodyB, 0xb)
-
-	// 	if n == 38 && d[37] == 0xa { // a
-
-	// 		bodyB = append(bodyB, make([]byte, 962)...) //962 + 38 = 1000
-	// 		bodyC = append(bodyC, 0xc, 3, 232, 3, 232)  //len,step=1000
-	// 		get = true
-	// 	} else if n == 42 && d[37] == 0xd { // d
-
-	// 		len := int(d[38])<<8 + int(d[39])
-	// 		step := int(d[40])<<8 + int(d[41])
-	// 		len = len - step
-	// 		if len < 38 {
-	// 			len = 38
-	// 		}
-	// 		bodyB = append(bodyB, make([]byte, len-38)...)
-	// 		bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
-	// 		get = true
-	// 	} else if n == 42 && d[37] == 0xe { // e
-
-	// 		len := int(d[38])<<8 + int(d[39])
-	// 		step := int(d[40])<<8 + int(d[41])
-	// 		len = len + step
-
-	// 		bodyB = append(bodyB, make([]byte, len-38)...)
-	// 		bodyC = append(bodyC, 0xc, uint8(len>>8), uint8(len), d[40], d[41])
-	// 		get = true
-	// 	}
-
-	// 	if get {
-	// 		if _, err := conn.WriteToUDP(bodyC, raddr); !e.Errlog(err) { // 回复c
-
-	// 			e.Errlog(rawnet.SendIPPacketDFUDP(lIP, raddr.IP, uint16(m.Port), uint16(raddr.Port), bodyB))
-	// 		}
-	// 	}
-
-	// }
-
-	return nil
 }
 
 type w struct {
