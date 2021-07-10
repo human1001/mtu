@@ -2,7 +2,6 @@ package mtu
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -45,12 +44,10 @@ func clientDownLink(sever string, port int) (uint16, error) {
 					}
 				} else if da[0] == 2 {
 					tmpStep = int(da[3])<<8 + int(da[4])
-					// fmt.Println("收到2", tmpStep, step)
 
 					if tmpStep <= step {
 						length, step = int(da[1])<<8+int(da[2]), int(da[3])<<8+int(da[4])
 
-						fmt.Println("进入", length, length <= MaxDFlen)
 						if step <= 1 {
 							if length <= MaxDFlen { // 能收到
 								mtu = uint16(length)
@@ -77,7 +74,7 @@ func clientDownLink(sever string, port int) (uint16, error) {
 			if _, err = conn.Write(data); err != nil {
 				return 0, err
 			}
-			time.Sleep(time.Millisecond * 10) // 50
+			time.Sleep(time.Millisecond * 20) // 50
 		} else {
 			data = <-daCh
 			i = 0
@@ -184,7 +181,6 @@ func (m *MTU) sever() error {
 			if n, raddr, err = conn.ReadFromUDP(da); !e.Errlog(err) && n >= 5 {
 
 				length, step = int(da[1])<<8+int(da[2]), int(da[3])<<8+int(da[4])
-				fmt.Println("收到  ", length, "  ", step)
 
 				if length-step >= 1 {
 					if da[0] == 3 { // 减

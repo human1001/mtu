@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	fh, err := os.OpenFile("~/log/mtuDiscover.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	fh, err := os.OpenFile("/root/mtuDiscover.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println(err)
 		return
