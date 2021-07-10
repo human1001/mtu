@@ -2,6 +2,7 @@ package mtu
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"time"
 
@@ -25,9 +26,10 @@ func clientDownLink(sever string, port int) (uint16, error) {
 
 	var da = []byte{3, 2000 >> 8, 2000 % (1 << 8), 1000 >> 8, 1000 % (1 << 8)} // 探测范围 [0,2000]
 	daCh <- da
+	var length, MaxDFlen, tmpStep int
+	var step int = 1000 // 和da初始值对应
 
-	var length, step, DFlen, tmpStep int
-	var end, getDF bool = false, false
+	var end bool = false
 
 	// 读
 	go func() {
@@ -35,29 +37,33 @@ func clientDownLink(sever string, port int) (uint16, error) {
 		for !end {
 			da = make([]byte, 2000)
 			if l, err = conn.Read(da); err == nil && l >= 5 {
-				if da[0] == 1 {
-					getDF = true
-					DFlen = l
-				} else if da[0] == 2 && DFlen == l {
 
+				if da[0] == 1 {
+					if l > MaxDFlen {
+						MaxDFlen = l
+					}
+				} else if da[0] == 2 {
 					tmpStep = int(da[3])<<8 + int(da[4])
-					if tmpStep < step {
-						length, step = int(da[1])<<8+int(da[2]), tmpStep
+					// fmt.Println("收到2", tmpStep, step)
+
+					if tmpStep <= step {
+						length, step = int(da[1])<<8+int(da[2]), int(da[3])<<8+int(da[4])
+
+						fmt.Println("进入", length)
 						if step <= 1 {
-							if getDF {
+							if length <= MaxDFlen { // 能收到
 								mtu = uint16(length)
 							} else {
 								mtu = uint16(length) - 1
 							}
 							end = true
 						}
-						step = step >> 1
-						if getDF {
+						step = step>>1 + step&0b1
+						if length <= MaxDFlen {
 							daCh <- []byte{4, byte(length >> 8), byte(length), byte(step >> 8), byte(step)}
 						} else {
 							daCh <- []byte{3, byte(length >> 8), byte(length), byte(step >> 8), byte(step)}
 						}
-						getDF = false
 					}
 				}
 			}
@@ -74,7 +80,7 @@ func clientDownLink(sever string, port int) (uint16, error) {
 			data = <-daCh
 			i = 0
 		}
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond * 100) // 50
 	}
 	if mtu == 0 {
 		return 0, errors.New("sever timeout")
@@ -161,7 +167,7 @@ func (m *MTU) sever() error {
 	Q.Run()
 
 	var id int64
-	var s map[int64]w
+	var s map[int64]w = make(map[int64]w)
 
 	var lIP net.IP
 	if lIP = rawnet.GetLocalIP(); lIP == nil {
@@ -177,6 +183,8 @@ func (m *MTU) sever() error {
 			if n, raddr, err = conn.ReadFromUDP(da); !e.Errlog(err) && n >= 5 {
 
 				length, step = int(da[1])<<8+int(da[2]), int(da[3])<<8+int(da[4])
+				fmt.Println("收到  ", length, "  ", step)
+
 				if length-step >= 1 {
 					if da[0] == 3 { // 减
 						newLength = length - step
@@ -187,7 +195,6 @@ func (m *MTU) sever() error {
 					e.Errlog(rawnet.SendIPPacketDFUDP(lIP, raddr.IP, uint16(m.Port), uint16(raddr.Port), append([]byte{1}, stuff...)))
 
 					var t w
-					t.length = newLength
 					t.data = []byte{2, byte(newLength >> 8), byte(newLength), byte(step >> 8), byte(step)}
 					t.raddr = *raddr
 					s[id] = t
@@ -209,7 +216,7 @@ func (m *MTU) sever() error {
 		if ok {
 			raddr := s[v].raddr
 
-			_, err = conn.WriteToUDP(append(s[v].data, make([]byte, s[v].length-len(s[v].data))...), &raddr)
+			_, err = conn.WriteToUDP(s[v].data, &raddr)
 			e.Errlog(err)
 		}
 	}
@@ -271,7 +278,6 @@ func (m *MTU) sever() error {
 }
 
 type w struct {
-	raddr  net.UDPAddr
-	data   []byte
-	length int
+	raddr net.UDPAddr
+	data  []byte
 }

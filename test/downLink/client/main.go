@@ -8,7 +8,7 @@ import (
 
 func main() {
 	m := mtu.NewMTU(func(m *mtu.MTU) *mtu.MTU {
-		m.SeverAddr = "severIP"
+		m.SeverAddr = "114.116.254.26"
 		return m
 	})
 
