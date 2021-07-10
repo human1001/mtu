@@ -14,7 +14,8 @@ import (
 // subPingDF
 func subPingDF(l int, pingHost string, faster bool) (int, error) {
 
-	// err 对应为stdErr输出, Windows中类似为 exit status 1; 没有参考价值
+	// err 对应为stdErr输出, 类似为 exit status 1; 没有参考价值、直接忽略
+	// ping -f -n 1 -l 1000 -w 1000 baidu.com
 	da, _ := exec.Command("cmd", "/C", "ping", "-f", "-n", "1", "-l", strconv.Itoa(l), "-w", "1000", pingHost).CombinedOutput()
 
 	da = com.ToUtf8(da)

@@ -9,7 +9,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-//sendIPPacketDFUDP windows send DF ip packet
+//sendIPPacketDFUDP Windows发送DF标识IP包
 func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 	// lIP、lPort not be used
 	var wsaData windows.WSAData
@@ -55,7 +55,7 @@ func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 }
 
 /*
-* Corresponding C program
+* 对应C程序
  */
 // -------------------------
 //  Windows

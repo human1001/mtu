@@ -86,9 +86,8 @@ func clientDownLink(sever string, port int) (uint16, error) {
 	if mtu == 0 {
 		return 0, errors.New("sever timeout")
 	} else {
-		return mtu, nil
+		return mtu + 28, nil // 8+20
 	}
-
 }
 
 // clientUpLink 上行链路MTU
@@ -101,12 +100,12 @@ func clientUpLink(pingHost string, faster bool) (uint16, error) {
 			if err != nil {
 				return 0, err
 			} else if err == nil && r > 1 {
-				return uint16(r), nil
+				return uint16(r) + 28, nil
 			}
 			f += r // 1372: -1, 1473:1
 		}
 		if f == 0 {
-			return 1472, nil
+			return 1472 + 28, nil
 		}
 		f = 0
 		for i := 1372; i <= 1373; i++ {
@@ -114,12 +113,12 @@ func clientUpLink(pingHost string, faster bool) (uint16, error) {
 			if err != nil {
 				return 0, err
 			} else if err == nil && r > 1 {
-				return uint16(r), nil
+				return uint16(r) + 28, nil
 			}
 			f += r
 		}
 		if f == 0 {
-			return 1372, nil
+			return 1372 + 28, nil
 		}
 	}
 
@@ -139,14 +138,14 @@ func clientUpLink(pingHost string, faster bool) (uint16, error) {
 		} else if r == 0 { // r==0 error or exception
 			break
 		} else {
-			return uint16(r), nil
+			return uint16(r) + 28, nil
 		}
 		step = right - left
 		if step <= 3 {
 			for i := right + 1; i <= left; i-- {
 				n, err := ping.PingDF(i, pingHost, faster)
 				if n == -1 {
-					return uint16(i), nil
+					return uint16(i) + 28, nil
 				} else if err != nil {
 					return 0, err
 				}
