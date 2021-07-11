@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lysShub/e"
+	"github.com/lysShub/mtu/internal/com"
 	"github.com/lysShub/mtu/internal/ping"
 	"github.com/lysShub/mtu/internal/rawnet"
 	"github.com/lysShub/tq"
@@ -178,7 +178,7 @@ func (m *MTU) sever() error {
 		var n, severMtu int = 0, 2000
 		var delay time.Time
 		for {
-			if n, raddr, err = conn.ReadFromUDP(da); !e.Errlog(err) && n >= 5 {
+			if n, raddr, err = conn.ReadFromUDP(da); !com.Errlog(err) && n >= 5 {
 
 				length, step = int(da[1])<<8+int(da[2]), int(da[3])<<8+int(da[4])
 
@@ -196,7 +196,7 @@ func (m *MTU) sever() error {
 							if strings.Contains(err.Error(), "message too long") {
 								severMtu = newLength
 							} else {
-								e.Errlog(err)
+								com.Errlog(err)
 							}
 						} else {
 							delay = time.Now().Add(time.Millisecond * 30)
@@ -228,7 +228,7 @@ func (m *MTU) sever() error {
 			raddr := s[v].raddr
 
 			_, err = conn.WriteToUDP(s[v].data, &raddr)
-			e.Errlog(err)
+			com.Errlog(err)
 		}
 	}
 }

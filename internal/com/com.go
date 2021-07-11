@@ -2,12 +2,15 @@ package com
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
+	"runtime"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/gogs/chardet"
-	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/html/charset"
 )
 
@@ -87,9 +90,16 @@ func ToUtf8(s []byte) []byte {
 	return r
 }
 
-// CreateUUID create id
-//  16Byte
-func CreateUUID() []byte {
-	u := uuid.Must(uuid.NewV4(), nil)
-	return u.Bytes()
+func Errlog(err ...error) bool {
+
+	var haveErr bool = false
+	for i, e := range err {
+		if e != nil {
+			haveErr = true
+			_, fp, ln, _ := runtime.Caller(1)
+			fmt.Fprintln(os.Stderr, fp+":"+strconv.Itoa(ln)+"."+strconv.Itoa(i+1)+"==> "+e.Error())
+		}
+	}
+
+	return haveErr
 }

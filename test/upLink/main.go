@@ -14,5 +14,5 @@ func main() {
 	})
 
 	fmt.Println("开始:")
-	fmt.Println(m.Client(true, false))
+	fmt.Println(m.Client(true, true))
 }
