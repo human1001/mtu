@@ -12,10 +12,11 @@ type MTU struct {
 	PingHost  string // 探测上行MTU时设置, PING命令请求地址, 默认baidu.com
 	SeverAddr string // 下行MTU时设置, 服务器IP或域名
 
-	// Port 使用端口(UDP), 探测下行链路设置, 默认 19986
+	// Port 使用端口(UDP), 探测下行链路时设置, 默认 19986
 	Port int
 }
 
+// NewMTU
 func NewMTU(f func(m *MTU) *MTU) *MTU {
 
 	var m = new(MTU)
@@ -30,7 +31,9 @@ func NewMTU(f func(m *MTU) *MTU) *MTU {
 }
 
 // Client 客户端
-//  只有探测上行链路时fastMode才有效；当 fastMode = true时, 将直接采用告知的MTU。如ICMP太大时,Ubuntu会提示：ping: local error: message too long, mtu=1400
+//  isUpLink 探测上行路径MTU，否则探测下行MTU
+//  fastMode 探测上行链路的快速模式，更快
+//   如数据包太大时,Ubuntu会提示：ping: local error: message too long, mtu=1400，快速模式直接采用1400这个值
 func (m *MTU) Client(isUpLink bool, fastMode bool) (uint16, error) {
 
 	if isUpLink {
@@ -52,7 +55,7 @@ func (m *MTU) Client(isUpLink bool, fastMode bool) (uint16, error) {
 
 // Sever 服务, 探测下行链路需要
 //  需要发送自定义IP包, 需要root权限运行。
-//  确保服务器的上行MTU足够大, 否则探测下行MTU的结果可能偏小
+//  确保服务器的上行MTU足够大, 不应成为链路瓶颈
 func (m *MTU) Sever() error {
 
 	return m.sever()
