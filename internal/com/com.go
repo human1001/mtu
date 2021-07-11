@@ -97,7 +97,11 @@ func Errlog(err ...error) bool {
 		if e != nil {
 			haveErr = true
 			_, fp, ln, _ := runtime.Caller(1)
-			fmt.Fprintln(os.Stderr, fp+":"+strconv.Itoa(ln)+"."+strconv.Itoa(i+1)+"==> "+e.Error())
+			if len(err) == 1 {
+				fmt.Fprintln(os.Stderr, fp+":"+strconv.Itoa(ln)+" :\n    "+e.Error())
+			} else {
+				fmt.Fprintln(os.Stderr, "["+strconv.Itoa(i+1)+"]. "+fp+":"+strconv.Itoa(ln)+" \n    "+e.Error())
+			}
 		}
 	}
 
