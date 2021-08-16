@@ -29,6 +29,8 @@ func ToIP(addr string) (net.IP, error) {
 
 // ToUtf8 Convert to any encoding (as far as possible) to utf8 encoding
 func ToUtf8(s []byte) []byte {
+	// "github.com/gogs/chardet"
+	// "golang.org/x/net/html/charset"
 
 	// chardet echo charsets:Shift_JIS,EUC-JP,EUC-KR,Big5,GB18030,ISO-8859-2(windows-1250),ISO-8859-5,ISO-8859-6,ISO-8859-7,indows-1253,ISO-8859-8(windows-1255),ISO-8859-8-I,ISO-8859-9(windows-1254),windows-1256,windows-1251,KOI8-R,IBM424_rtl,IBM424_ltr,IBM420_rtl,IBM420_ltr,ISO-2022-JP
 

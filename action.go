@@ -160,8 +160,7 @@ func (m *MTU) sever() error {
 	}
 	defer conn.Close()
 
-	Q := new(tq.TQ) // 时间任务队列
-	Q.Run()
+	Q := tq.NewTQ() // 时间任务队列
 
 	var id int64
 	var s map[int64]w = make(map[int64]w)

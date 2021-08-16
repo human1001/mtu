@@ -1,7 +1,7 @@
 # github.com/gogs/chardet v0.0.0-20191104214054-4b6791f73a28
 ## explicit
 github.com/gogs/chardet
-# github.com/lysShub/tq v0.2.1
+# github.com/lysShub/tq v0.2.2
 ## explicit
 github.com/lysShub/tq
 # golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
