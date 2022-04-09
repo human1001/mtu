@@ -1,3 +1,4 @@
+//go:build linux || netbsd || openbsd || darwin || freebsd
 // +build linux netbsd openbsd darwin freebsd
 
 package rawnet
@@ -51,7 +52,7 @@ func PackageIPHeader(lIP, rIP net.IP, lport, rport uint16, flag, offset int, pro
 	return iph, nil
 }
 
-// sendIPPacket 
+// sendIPPacket
 func sendIPPacket(lIP, rIP net.IP, lPort, rPort uint16, flag, offset int, protocol uint8, d []byte) error {
 
 	iph, err := PackageIPHeader(lIP, rIP, lPort, rPort, flag, offset, protocol, d)
@@ -80,7 +81,7 @@ func sendIPPacket(lIP, rIP net.IP, lPort, rPort uint16, flag, offset int, protoc
 }
 
 // sendIPPacketDFUDP
-func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
+func sendIPPacketForUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 
 	raddr, err1 := net.ResolveIPAddr("ip4:udp", rIP.String())
 	laddr, err2 := net.ResolveIPAddr("ip4:udp", lIP.String())
