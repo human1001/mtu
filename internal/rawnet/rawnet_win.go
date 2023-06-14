@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package rawnet
@@ -9,7 +10,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-//sendIPPacketDFUDP Windows发送DF标识IP包
+// sendIPPacketDFUDP Windows发送DF标识IP包
 func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 	// lIP、lPort not be used
 	var wsaData windows.WSAData
@@ -17,7 +18,7 @@ func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 	if err != nil {
 		return err
 	}
-	sh, err := windows.Socket(windows.AF_INET, windows.SOCK_RAW, 17) //windows.IPPROTO_ICMP
+	fd, err := windows.Socket(windows.AF_INET, windows.SOCK_RAW, 17) //windows.IPPROTO_ICMP
 	if err != nil {
 		return err
 	}
@@ -33,17 +34,17 @@ func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 	}
 
 	var aOptVal bool = true
-	err = windows.Setsockopt(sh, windows.IPPROTO_IP, 14, (*byte)(unsafe.Pointer(&aOptVal)), int32(unsafe.Sizeof(aOptVal))) // 不分包
+	err = windows.Setsockopt(fd, windows.IPPROTO_IP, 14, (*byte)(unsafe.Pointer(&aOptVal)), int32(unsafe.Sizeof(aOptVal))) // 不分包
 	if err != nil {
 		return err
 	}
 
-	err = windows.Sendto(sh, d, 0, sAddr) //Complete transport layer data package
+	err = windows.Sendto(fd, d, 0, sAddr) //Complete transport layer data package
 	if err != nil {
 		return err
 	}
 
-	err = windows.Closesocket(sh)
+	err = windows.Closesocket(fd)
 	if err != nil {
 		return err
 	}

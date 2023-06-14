@@ -3,19 +3,15 @@ package rawnet
 import (
 	"net"
 	"strings"
-	"time"
-
-	"github.com/google/gopacket/routing"
-	"github.com/mdlayher/arp"
 )
 
 var err error
 
-//  checkSum check sum
+// checkSum check sum
 func checkSum(d []byte) uint16 {
 	var S uint32
 	l := len(d)
-	if l&0b1 == 1 { //奇数
+	if l&0b1 == 1 { //奇数个
 		for i := 0; i < l-1; {
 			S = S + uint32(d[i])<<8 + uint32(d[i+1])
 			if S>>16 > 0 { // 反码加法 溢出加一
@@ -47,10 +43,10 @@ func PackageUDP(laddr, raddr net.IP, lport, rport uint16, d []byte) []byte {
 	//伪头
 	P[0], P[1], P[2], P[3] = laddr[12], laddr[13], laddr[14], laddr[15]
 	P[4], P[5], P[6], P[7] = raddr[12], raddr[13], raddr[14], raddr[15]
-	P[8], P[9] = 0, 17 //协议类型UDP
-	// 实头
+	P[8], P[9] = 0, 17                                   //协议类型UDP
 	P[10], P[11] = uint8((len(d)+8)>>8), uint8(len(d)+8) //整个包长度
-	P[12], P[13] = uint8(lport>>8), uint8(lport)         //源端口
+	// 实头
+	P[12], P[13] = uint8(lport>>8), uint8(lport) //源端口
 	P[14], P[15] = uint8(rport>>8), uint8(rport)
 	P[16], P[17] = uint8((len(d)+8)>>8), uint8(len(d)+8) //长度
 	P[18], P[19] = 0, 0                                  //校验和
@@ -79,34 +75,4 @@ func SendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 	uR := PackageUDP(lIP, rIP, lPort, rPort, d)
 
 	return sendIPPacketDFUDP(lIP, rIP, lPort, rPort, uR)
-}
-
-// GetSrcMAC 获取默认网卡MAC地址和吓一跳MAC地址
-func GetMAC() (srcMAC, dstMAC net.HardwareAddr, err error) {
-	r, err := routing.New()
-	if err != nil {
-		panic(err)
-	}
-
-	var ifi *net.Interface
-	var getway net.IP
-	ifi, getway, _, err = r.Route(net.IPv4zero)
-	if err != nil {
-		return
-	}
-
-	srcMAC = ifi.HardwareAddr
-
-	var arpc *arp.Client
-	if arpc, err = arp.Dial(ifi); err != nil {
-		return
-	} else {
-		arpc.SetDeadline(time.Now().Add(time.Millisecond * 100))
-
-		if dstMAC, err = arpc.Resolve(getway); err != nil {
-			return
-		} else {
-			return
-		}
-	}
 }
