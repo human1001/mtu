@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/lysShub/mtu"
+	"github.com/human1001/mtu"
 )
 
 func main() {
 	m := mtu.NewMTU(func(m *mtu.MTU) *mtu.MTU {
-		m.SeverAddr = "114.116.254.26"
+		m.SeverAddr = "127.0.0.1"
 		return m
 	})
 

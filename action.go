@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lysShub/mtu/internal/com"
-	"github.com/lysShub/mtu/internal/ping"
-	"github.com/lysShub/mtu/internal/rawnet"
+	"github.com/human1001/mtu/internal/com"
+	"github.com/human1001/mtu/internal/ping"
+	"github.com/human1001/mtu/internal/rawnet"
 	"github.com/lysShub/tq"
 )
 

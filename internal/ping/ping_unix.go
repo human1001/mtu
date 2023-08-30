@@ -1,3 +1,4 @@
+//go:build linux || android || netbsd || openbsd || freebsd
 // +build linux android netbsd openbsd freebsd
 
 package ping
@@ -9,7 +10,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/lysShub/mtu/internal/com"
+	"github.com/human1001/mtu/internal/com"
 )
 
 // subPingDF linux

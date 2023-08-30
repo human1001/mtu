@@ -81,7 +81,7 @@ func sendIPPacket(lIP, rIP net.IP, lPort, rPort uint16, flag, offset int, protoc
 }
 
 // sendIPPacketDFUDP
-func sendIPPacketForUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
+func sendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 
 	raddr, err1 := net.ResolveIPAddr("ip4:udp", rIP.String())
 	laddr, err2 := net.ResolveIPAddr("ip4:udp", lIP.String())

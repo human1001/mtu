@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/lysShub/mtu"
+	"github.com/human1001/mtu"
 )
 
 func main() {
 
 	m := mtu.NewMTU(func(m *mtu.MTU) *mtu.MTU {
-		m.PingHost = "baidu.com"
+		m.PingHost = "127.0.0.1"
 		return m
 	})
 

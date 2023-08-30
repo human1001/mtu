@@ -73,6 +73,5 @@ func GetLocalIP() net.IP {
 func SendIPPacketDFUDP(lIP, rIP net.IP, lPort, rPort uint16, d []byte) error {
 
 	uR := PackageUDP(lIP, rIP, lPort, rPort, d)
-
 	return sendIPPacketDFUDP(lIP, rIP, lPort, rPort, uR)
 }

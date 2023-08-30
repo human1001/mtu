@@ -3,7 +3,7 @@ package mtu
 import (
 	"errors"
 
-	"github.com/lysShub/mtu/internal/com"
+	"github.com/human1001/mtu/internal/com"
 )
 
 var err error
@@ -31,9 +31,10 @@ func NewMTU(f func(m *MTU) *MTU) *MTU {
 }
 
 // Client 客户端
-//  isUpLink 探测上行路径MTU，否则探测下行MTU
-//  fastMode 探测上行链路的快速模式，更快
-//   如数据包太大时,Ubuntu会提示：ping: local error: message too long, mtu=1400，快速模式直接采用1400这个值
+//
+//	isUpLink 探测上行路径MTU，否则探测下行MTU
+//	fastMode 探测上行链路的快速模式，更快
+//	 如数据包太大时,Ubuntu会提示：ping: local error: message too long, mtu=1400，快速模式直接采用1400这个值
 func (m *MTU) Client(isUpLink bool, fastMode bool) (uint16, error) {
 
 	if isUpLink {
@@ -54,8 +55,9 @@ func (m *MTU) Client(isUpLink bool, fastMode bool) (uint16, error) {
 }
 
 // Sever 服务, 探测下行链路需要
-//  需要发送自定义IP包, 需要root权限运行。
-//  确保服务器的上行MTU足够大, 不应成为链路瓶颈
+//
+//	需要发送自定义IP包, 需要root权限运行。
+//	确保服务器的上行MTU足够大, 不应成为链路瓶颈
 func (m *MTU) Sever() error {
 
 	return m.sever()

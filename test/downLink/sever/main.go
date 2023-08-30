@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/lysShub/mtu"
+	"github.com/human1001/mtu"
 )
 
 func main() {

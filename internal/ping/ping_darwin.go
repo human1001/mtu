@@ -1,3 +1,4 @@
+//go:build darwin
 // +build darwin
 
 package ping
@@ -5,7 +6,8 @@ package ping
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"fmt"
+	"github.com/human1001/mtu/internal/com"
 	"os/exec"
 	"strconv"
 )
@@ -15,8 +17,14 @@ func subPingDF(l int, pingHost string, faster bool) (int, error) {
 
 	da, _ := exec.Command("ping", "-D", "-c", "1", "-s", strconv.Itoa(l), "-t", "1", pingHost).CombinedOutput()
 
-	stdout = com.ToUtf8(da)
-
+	da = com.ToUtf8(da)
+	fmt.Println()
+	fmt.Println()
+	fmt.Println()
+	fmt.Println(string(da))
+	fmt.Println()
+	fmt.Println()
+	fmt.Println()
 	if bytes.Contains(da, []byte("too long")) {
 		return 1, nil
 

@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package ping
@@ -8,7 +9,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/lysShub/mtu/internal/com"
+	"github.com/human1001/mtu/internal/com"
 )
 
 // subPingDF
